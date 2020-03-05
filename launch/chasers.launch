@@ -7,5 +7,5 @@
 
 	<node pkg="robot_chase" type="chaser.py" name="chaser2" args="--id=2" output="screen"></node>
 
-	<node pkg="robot_chase" type="chaser_controller.py" name="chaser_control" args="--mode=$(arg mode)" output="screen"></node>
+	<node pkg="robot_chase" type="chaser_control.py" name="chaser_control" args="--mode=$(arg mode)" output="screen"></node>
 </launch>
