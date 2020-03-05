@@ -30,7 +30,7 @@ class PathSubscriber(object):
 
 
 def path_follow(path, position):
-
+  pass
 
 def run(args):
   c_id = args.id
@@ -51,7 +51,7 @@ def run(args):
       continue
 
     # Calculate and publish control inputs.
-    u, w = path_follow(path, groundtruth.poses[])
+    u, w = path_follow(path, groundtruth.poses[0])
     vel_msg = Twist()
     vel_msg.linear.x = u
     vel_msg.angular.z = w

@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 import rospy
+import argparse
 from common import MultiGroundtruthPose
 
 from geometry_msgs.msg import PoseArray, Pose, Point
@@ -24,8 +25,7 @@ def run(args):
 
   # Update paths every 100 ms.
   rate_limiter = rospy.Rate(10)
-  publishers = 
-    [rospy.Publisher('/c'+str(i)+'/path', PoseArray, queue_size=1)]
+  publishers = [rospy.Publisher('/c'+str(i)+'/path', PoseArray, queue_size=1) for i in range(3)]
 
   gts = MultiGroundtruthPose(['c0', 'c1', 'c2', 'r0', 'r1', 'r2'])
 
