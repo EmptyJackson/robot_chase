@@ -9,6 +9,7 @@ import numpy as np
 import rospy
 import random
 import math
+from common import *
 
 # Robot motion commands:
 # http://docs.ros.org/api/geometry_msgs/html/msg/Twist.html
@@ -63,7 +64,7 @@ def run(args):
   rate_limiter = rospy.Rate(100)
   publisher = rospy.Publisher('r' + str(runner_id) + '/cmd_vel', Twist, queue_size=5)
   # Keep track of groundtruth position for plotting purposes.
-  groundtruth = GroundtruthPose(name='r' + str(runner_id))
+  groundtruth = MultiGroundtruthPose(names=['r0', 'r1'])
 
   while not rospy.is_shutdown():
     # Make sure all measurements are ready.
