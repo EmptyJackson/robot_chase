@@ -3,9 +3,9 @@
   <arg name="runner_2" default="r2"/>
   <arg name="runner_3"  default="r3"/>
 
-  <arg name="chaser_1"  default="c1"/>
-  <arg name="chaser_2" default="c2"/>
-  <arg name="chaser_3"  default="c3"/>
+  <arg name="chaser_0"  default="c0"/>
+  <arg name="chaser_1" default="c1"/>
+  <arg name="chaser_2"  default="c2"/>
 
   <arg name="runner_1_x_pos" default="-7.0"/>
   <arg name="runner_1_y_pos" default="-1.0"/>
@@ -22,20 +22,20 @@
   <arg name="runner_3_z_pos" default=" 0.0"/>
   <arg name="runner_3_yaw"   default=" 0.0"/>
 
-  <arg name="chaser_1_x_pos" default=" 7.0"/>
+  <arg name="chaser_0_x_pos" default=" 7.0"/>
+  <arg name="chaser_0_y_pos" default=" 1.0"/>
+  <arg name="chaser_0_z_pos" default=" 0.0"/>
+  <arg name="chaser_0_yaw"   default="-1.57"/>
+
+  <arg name="chaser_1_x_pos" default="-7.0"/>
   <arg name="chaser_1_y_pos" default=" 1.0"/>
   <arg name="chaser_1_z_pos" default=" 0.0"/>
   <arg name="chaser_1_yaw"   default="-1.57"/>
 
-  <arg name="chaser_2_x_pos" default="-7.0"/>
-  <arg name="chaser_2_y_pos" default=" 1.0"/>
+  <arg name="chaser_2_x_pos" default="-0.5"/>
+  <arg name="chaser_2_y_pos" default="-3.0"/>
   <arg name="chaser_2_z_pos" default=" 0.0"/>
-  <arg name="chaser_2_yaw"   default="-1.57"/>
-
-  <arg name="chaser_3_x_pos" default="-0.5"/>
-  <arg name="chaser_3_y_pos" default="-3.0"/>
-  <arg name="chaser_3_z_pos" default=" 0.0"/>
-  <arg name="chaser_3_yaw"   default=" 0.0"/>
+  <arg name="chaser_2_yaw"   default=" 0.0"/>
 
   <include file="$(find gazebo_ros)/launch/empty_world.launch">
     <arg name="world_name" value="$(find robot_chase)/worlds/simple.world"/>
@@ -79,6 +79,17 @@
     <node name="spawn_urdf" pkg="gazebo_ros" type="spawn_model" args="-urdf -model $(arg runner_3) -x $(arg runner_3_x_pos) -y $(arg runner_3_y_pos) -z $(arg runner_3_z_pos) -Y $(arg runner_3_yaw) -param robot_description" />
   </group>
 
+  <group ns = "$(arg chaser_0)">
+    <param name="robot_description" command="$(find xacro)/xacro --inorder $(find turtlebot3_description)/urdf/turtlebot3_burger.urdf.xacro" />
+
+    <node pkg="robot_state_publisher" type="robot_state_publisher" name="robot_state_publisher" output="screen">
+      <param name="publish_frequency" type="double" value="50.0" />
+      <param name="tf_prefix" value="$(arg chaser_0)" />
+    </node>
+    
+    <node name="spawn_urdf" pkg="gazebo_ros" type="spawn_model" args="-urdf -model $(arg chaser_0) -x $(arg chaser_0_x_pos) -y $(arg chaser_0_y_pos) -z $(arg chaser_0_z_pos) -Y $(arg chaser_0_yaw) -param robot_description" />
+  </group>
+
   <group ns = "$(arg chaser_1)">
     <param name="robot_description" command="$(find xacro)/xacro --inorder $(find turtlebot3_description)/urdf/turtlebot3_burger.urdf.xacro" />
 
@@ -86,7 +97,7 @@
       <param name="publish_frequency" type="double" value="50.0" />
       <param name="tf_prefix" value="$(arg chaser_1)" />
     </node>
-    
+
     <node name="spawn_urdf" pkg="gazebo_ros" type="spawn_model" args="-urdf -model $(arg chaser_1) -x $(arg chaser_1_x_pos) -y $(arg chaser_1_y_pos) -z $(arg chaser_1_z_pos) -Y $(arg chaser_1_yaw) -param robot_description" />
   </group>
 
@@ -99,17 +110,6 @@
     </node>
 
     <node name="spawn_urdf" pkg="gazebo_ros" type="spawn_model" args="-urdf -model $(arg chaser_2) -x $(arg chaser_2_x_pos) -y $(arg chaser_2_y_pos) -z $(arg chaser_2_z_pos) -Y $(arg chaser_2_yaw) -param robot_description" />
-  </group>
-
-  <group ns = "$(arg chaser_3)">
-    <param name="robot_description" command="$(find xacro)/xacro --inorder $(find turtlebot3_description)/urdf/turtlebot3_burger.urdf.xacro" />
-
-    <node pkg="robot_state_publisher" type="robot_state_publisher" name="robot_state_publisher" output="screen">
-      <param name="publish_frequency" type="double" value="50.0" />
-      <param name="tf_prefix" value="$(arg chaser_3)" />
-    </node>
-
-    <node name="spawn_urdf" pkg="gazebo_ros" type="spawn_model" args="-urdf -model $(arg chaser_3) -x $(arg chaser_3_x_pos) -y $(arg chaser_3_y_pos) -z $(arg chaser_3_z_pos) -Y $(arg chaser_3_yaw) -param robot_description" />
   </group>
 
 </launch>

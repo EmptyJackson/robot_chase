@@ -1,11 +1,11 @@
 <launch>
 	<arg name="mode" />
 
-	<node pkg="robot_chase" type="chaser.py" name="chaser1" output="screen"></node>
+	<node pkg="robot_chase" type="chaser.py" name="chaser0" args="--id=0" output="screen"></node>
 
-	<node pkg="robot_chase" type="chaser.py" name="chaser2" output="screen"></node>
+	<node pkg="robot_chase" type="chaser.py" name="chaser1" args="--id=1" output="screen"></node>
 
-	<node pkg="robot_chase" type="chaser.py" name="chaser3" output="screen"></node>
+	<node pkg="robot_chase" type="chaser.py" name="chaser2" args="--id=2" output="screen"></node>
 
 	<node pkg="robot_chase" type="chaser_controller.py" name="chaser_control" args="--mode=$(arg mode)" output="screen"></node>
 </launch>
