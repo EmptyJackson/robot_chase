@@ -1,5 +1,7 @@
 <launch>
 	<arg name="mode" />
 
-	<node pkg="robot_chase" type="runner.py" name="runner0" output="screen" args="--id=42"></node>
+	<node pkg="robot_chase" type="runner.py" name="runner0" output="screen" args="--id=0"></node>
+
+	<node pkg="robot_chase" type="runner.py" name="runner1" output="screen" args="--id=1"></node>
 </launch>

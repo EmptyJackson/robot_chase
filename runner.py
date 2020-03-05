@@ -32,7 +32,6 @@ class GroundtruthPose(object):
     self._name = name
 
   def callback(self, msg):
-    print(msg.name)
     idx = [i for i, n in enumerate(msg.name) if n == self._name]
     if not idx:
       raise ValueError('Specified name "{}" does not exist.'.format(self._name))
@@ -62,9 +61,9 @@ def run(args):
 
   # Update control every 100 ms.
   rate_limiter = rospy.Rate(100)
-  publisher = rospy.Publisher('r1/cmd_vel', Twist, queue_size=5)
+  publisher = rospy.Publisher('r' + str(runner_id) + '/cmd_vel', Twist, queue_size=5)
   # Keep track of groundtruth position for plotting purposes.
-  groundtruth = GroundtruthPose(name='r1')
+  groundtruth = GroundtruthPose(name='r' + str(runner_id))
 
   while not rospy.is_shutdown():
     # Make sure all measurements are ready.
