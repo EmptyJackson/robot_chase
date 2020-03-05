@@ -21,6 +21,9 @@ from gazebo_msgs.msg import ModelStates
 from tf.transformations import euler_from_quaternion
 
 
+X = 0
+Y = 1
+YAW = 2
 
 class GroundtruthPose(object):
   def __init__(self, name='turtlebot3_burger'):
@@ -29,6 +32,7 @@ class GroundtruthPose(object):
     self._name = name
 
   def callback(self, msg):
+    print(msg.name)
     idx = [i for i, n in enumerate(msg.name) if n == self._name]
     if not idx:
       raise ValueError('Specified name "{}" does not exist.'.format(self._name))
@@ -52,13 +56,15 @@ class GroundtruthPose(object):
 
 
 def run(args):
-  rospy.init_node('runner_control')
+  runner_id = args.id
+  rospy.init_node('runner_control' + str(runner_id))
+
 
   # Update control every 100 ms.
   rate_limiter = rospy.Rate(100)
-  publisher = rospy.Publisher('/cmd_vel', Twist, queue_size=5)
+  publisher = rospy.Publisher('r1/cmd_vel', Twist, queue_size=5)
   # Keep track of groundtruth position for plotting purposes.
-  groundtruth = GroundtruthPose()
+  groundtruth = GroundtruthPose(name='r1')
 
   while not rospy.is_shutdown():
     # Make sure all measurements are ready.
@@ -66,10 +72,9 @@ def run(args):
       rate_limiter.sleep()
       continue
 
-    u, w = avoidance_method(*laser.measurements)
     vel_msg = Twist()
-    vel_msg.linear.x = u
-    vel_msg.angular.z = w
+    vel_msg.linear.x = 1
+    vel_msg.angular.z = 0.1
     publisher.publish(vel_msg)
 
     rate_limiter.sleep()
@@ -77,10 +82,9 @@ def run(args):
 
 if __name__ == '__main__':
   parser = argparse.ArgumentParser(description='Runners control')
-  #parser.add_argument('--mode', action='store', default='braitenberg', help='Method.', choices=['braitenberg', 'rule_based'])
+  parser.add_argument('--id', action='store', default='41', help='Method.')
   args, unknown = parser.parse_known_args()
   try:
-    print(args)
     run(args)
   except rospy.ROSInterruptException:
     pass

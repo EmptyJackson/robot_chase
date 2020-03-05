@@ -1,26 +1,26 @@
 <launch>
-  <arg name="runner_1"  default="r1"/>
-  <arg name="runner_2" default="r2"/>
-  <arg name="runner_3"  default="r3"/>
+  <arg name="runner_0"  default="r0"/>
+  <arg name="runner_1" default="r1"/>
+  <arg name="runner_2"  default="r2"/>
 
   <arg name="chaser_0"  default="c0"/>
   <arg name="chaser_1" default="c1"/>
   <arg name="chaser_2"  default="c2"/>
 
-  <arg name="runner_1_x_pos" default="-7.0"/>
-  <arg name="runner_1_y_pos" default="-1.0"/>
-  <arg name="runner_1_z_pos" default=" 0.0"/>
-  <arg name="runner_1_yaw"   default=" 1.57"/>
+  <arg name="runner_0_x_pos" default="-7.0"/>
+  <arg name="runner_0_y_pos" default="-1.0"/>
+  <arg name="runner_0_z_pos" default=" 0.0"/>
+  <arg name="runner_0_yaw"   default=" 1.57"/>
 
-  <arg name="runner_2_x_pos" default=" 7.0"/>
-  <arg name="runner_2_y_pos" default="-1.0"/>
-  <arg name="runner_2_z_pos" default=" 0.0"/>
-  <arg name="runner_2_yaw"   default=" 1.57"/>
+  <arg name="runner_0_x_pos" default=" 7.0"/>
+  <arg name="runner_0_y_pos" default="-1.0"/>
+  <arg name="runner_0_z_pos" default=" 0.0"/>
+  <arg name="runner_0_yaw"   default=" 1.57"/>
 
-  <arg name="runner_3_x_pos" default=" 0.5"/>
-  <arg name="runner_3_y_pos" default=" 3.0"/>
-  <arg name="runner_3_z_pos" default=" 0.0"/>
-  <arg name="runner_3_yaw"   default=" 0.0"/>
+  <arg name="runner_0_x_pos" default=" 0.5"/>
+  <arg name="runner_0_y_pos" default=" 3.0"/>
+  <arg name="runner_0_z_pos" default=" 0.0"/>
+  <arg name="runner_0_yaw"   default=" 0.0"/>
 
   <arg name="chaser_0_x_pos" default=" 7.0"/>
   <arg name="chaser_0_y_pos" default=" 1.0"/>
