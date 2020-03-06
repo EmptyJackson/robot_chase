@@ -22,6 +22,7 @@ from sensor_msgs.msg import LaserScan
 from gazebo_msgs.msg import ModelStates
 from tf.transformations import euler_from_quaternion
 
+import matplotlib.pyplot as plt
 
 X = 0
 Y = 1
@@ -70,6 +71,8 @@ def run(args):
 
   path = None
 
+  occupancy_grid = get_occupancy_grid()
+
   while not rospy.is_shutdown():
     # Make sure all measurements are ready.
     if not groundtruth.ready:
@@ -79,7 +82,12 @@ def run(args):
     pose = groundtruth.poses[rname]
 
     if path is None:
-      rrt_star_path(pose, np.array([3, 3]), get_occupancy_grid())
+      path, s, g = rrt_star_path(pose, np.array([4, -2]), occupancy_grid)
+
+      fig, ax = plt.subplots()
+      occupancy_grid.draw()
+      draw_solution(s, g)
+      plt.show()
 
     v = get_velocity(pose[:2], path)
     u, w = feedback_linearized(pose, v, 0.1)

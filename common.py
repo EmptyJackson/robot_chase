@@ -43,6 +43,8 @@ RESOLUTION = 0.05
 FREE = 0
 OCCUPIED = 2
 
+SPEED = 1
+
 class MultiGroundtruthPose(object):
   def __init__(self, names):
     rospy.Subscriber('/gazebo/model_states', ModelStates, self.callback)

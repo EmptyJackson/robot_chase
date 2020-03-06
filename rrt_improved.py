@@ -28,7 +28,7 @@ GOAL_POSITION = np.array([1.5, 1.5], dtype=np.float32)  # Any orientation is goo
 START_POSE = np.array([-1.5, -1.5, 0.], dtype=np.float32)
 
 MIN_ITERATIONS = 200
-MAX_ITERATIONS = 1000
+MAX_ITERATIONS = 5000
 
 
 def sample_random_position(occupancy_grid):
@@ -311,7 +311,10 @@ def rrt_star(start_pose, goal_position, occupancy_grid):
     print('Goal position is not in the free space.')
     return start_node, final_node
   graph.append(start_node)
-  for i in range(MAX_ITERATIONS): 
+  for i in range(MAX_ITERATIONS):
+    if i % 100 == 0:
+      print(i)
+    
     position = sample_random_position(occupancy_grid)
     # With a random chance, draw the goal position.
     if np.random.rand() < .05:
@@ -376,7 +379,7 @@ def rrt_star_path(start_pose, goal_position, occupancy_grid):
     path_nodes_rev.append(current_node.parent)
     current_node = current_node.parent
 
-  return list(reversed(node.position for node in path_nodes_rev))
+  return list(reversed([node.position for node in path_nodes_rev])), start_node, final_node
   
 
 def find_circle(node_a, node_b):
