@@ -19,6 +19,7 @@ from sensor_msgs.msg import LaserScan
 # For groundtruth information.
 from gazebo_msgs.msg import ModelStates
 from tf.transformations import euler_from_quaternion
+
 X = 0
 Y = 1
 YAW = 2
@@ -53,3 +54,5 @@ class MultiGroundtruthPose(object):
   @property
   def poses(self):
     return self._poses
+
+
