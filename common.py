@@ -193,7 +193,7 @@ def get_occupancy_grid():
   for x in range(dim):
     for y in range(dim):
       position = np.array([x, y])
-      position = (position - (dim/2)) * 2
+      position = (position - (dim/2)) * RESOLUTION
       if collision(position):
         grid[x, y] = OCCUPIED
   return OccupancyGrid(grid, [-ARENA_OFFSET, -ARENA_OFFSET, 0.], RESOLUTION)
@@ -205,17 +205,20 @@ def collision(position):
 
   # Cylinders
   for c in CYLINDER_POSITIONS:
-    if np.linalg.norm(c - position) > CYLINDER_RADIUS:
+    if np.linalg.norm(c - position) < CYLINDER_RADIUS:
       return True
 
+  # Grid
   rel_pos = position % GRID_FREQ
   on_edge = np.logical_or(
     rel_pos < WALL_WIDTH,
     rel_pos > GRID_FREQ - WALL_WIDTH)
-  
   in_door = np.logical_and(
     rel_pos > DOOR_BOUNDS[0],
     rel_pos < DOOR_BOUNDS[1])
+  tmp = in_door[0]
+  in_door[0] = in_door[1]
+  in_door[1] = tmp
   return np.any(np.logical_and(on_edge, np.logical_not(in_door)))
 
 if __name__=='__main__':
