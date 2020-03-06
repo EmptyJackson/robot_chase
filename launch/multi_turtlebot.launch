@@ -12,8 +12,8 @@
   <arg name="runner_0_z_pos" default=" 0.0"/>
   <arg name="runner_0_yaw"   default=" 0.0"/>
 
-  <arg name="runner_1_x_pos" default=" 2.0"/>
-  <arg name="runner_1_y_pos" default="-2.0"/>
+  <arg name="runner_1_x_pos" default="-2.0"/>
+  <arg name="runner_1_y_pos" default=" 2.0"/>
   <arg name="runner_1_z_pos" default=" 0.0"/>
   <arg name="runner_1_yaw"   default=" 0.0"/>
 
