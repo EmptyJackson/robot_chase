@@ -9,6 +9,7 @@ import numpy as np
 import matplotlib.pylab as plt
 import matplotlib.patches as patches
 import scipy.signal
+import scipy.stats
 import rospy
 import random
 import math
@@ -223,6 +224,18 @@ def collision(position):
   in_door[0] = in_door[1]
   in_door[1] = tmp
   return np.any(np.logical_and(on_edge, np.logical_not(in_door)))
+
+class VecField:
+  def __init__(self, targets, sigma):
+    self.targets = targets
+    self.sigma = sigma
+
+  def weight(self, position):
+    weight = 0.
+    for target in self.targets:
+      weight += scipy.stats.norm.pdf(
+        np.linalg.norm(position - target),0, self.sigma)
+    return weight
 
 if __name__=='__main__':
   get_occupancy_grid().draw()
