@@ -26,19 +26,25 @@ OCCUPIED = 2
 ROBOT_RADIUS = 0.105 / 2.
 GOAL_POSITION = np.array([1.5, 1.5], dtype=np.float32)  # Any orientation is good.
 START_POSE = np.array([-1.5, -1.5, 0.], dtype=np.float32)
-MAX_ITERATIONS = 500
+MAX_ITERATIONS = 200
 
 
 def sample_random_position(occupancy_grid):
   position = np.zeros(2, dtype=np.float32)
 
-
-  position[0] = np.random.random() * 4. - 2.
-  position[1] = np.random.random() * 4. - 2.
+  width = len(occupancy_grid.values) * occupancy_grid.resolution
+  height = len(occupancy_grid.values[0]) * occupancy_grid.resolution
+  o_x = occupancy_grid.origin[0]
+  o_y = occupancy_grid.origin[1]
+  
+  
+  
+  position[0] = np.random.random() * width + o_x
+  position[1] = np.random.random() * height + o_y
 
   while not occupancy_grid.is_free(position):
-    position[0] = np.random.random() * 4. - 2.
-    position[1] = np.random.random() * 4. - 2.
+    position[0] = np.random.random() * width + o_x
+    position[1] = np.random.random() * height + o_y
   
 
   return position
@@ -297,7 +303,7 @@ class Node(object):
       n.kill()
 
 
-def rrt_star(start_pose, goal_position, occupancy_grid):
+def rrt_star(start_pose, goal_position, occupancy_grid):  
   # RRT builds a graph one node at a time.
   graph = []
   start_node = Node(start_pose)
@@ -359,6 +365,19 @@ def rrt_star(start_pose, goal_position, occupancy_grid):
       
   return start_node, final_node
 
+
+def rrt_star_path(start_pose, goal_position, occupancy_grid):
+  start_node, final_node = rrt_star(start_position, goal_position, occupancy_grid)
+
+  path_nodes_rev = [final_node]
+
+  current_node = final_node
+  while current_node.parent is not None:
+    path_nodes_rev.append(current_node.parent)
+    current_node = current_node.parent
+
+  return list(reversed(node.position for node in path_nodes_rev))
+  
 
 def find_circle(node_a, node_b):
   def perpendicular(v):
