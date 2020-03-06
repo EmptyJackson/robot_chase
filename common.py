@@ -29,10 +29,10 @@ YAW = 2
 
 ROBOT_RADIUS = 0.105 / 2.
 CYLINDER_POSITIONS = np.array(
-  [[-6., 6.], 
-   [-2., 2.],
-   [ 2.,-6.],
-   [ 6.,-2.]], dtype=np.float32)
+  [[ 6., 6.], 
+   [ 2., 2.],
+   [-2.,-6.],
+   [-6.,-2.]], dtype=np.float32)
 CYLINDER_RADIUS = 1. + ROBOT_RADIUS
 WALL_WIDTH = ROBOT_RADIUS + 0.15 / 2.
 DOOR_BOUNDS = np.array([1.125, 2.875], dtype=np.float32)
