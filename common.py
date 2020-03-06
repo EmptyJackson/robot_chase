@@ -35,7 +35,7 @@ CYLINDER_POSITIONS = np.array(
    [ 6.,-2.]], dtype=np.float32)
 CYLINDER_RADIUS = 1. + ROBOT_RADIUS
 WALL_WIDTH = ROBOT_RADIUS + 0.15 / 2.
-DOOR_BOUNDS = np.array([1.5, 2.5], dtype=np.float32)
+DOOR_BOUNDS = np.array([1.125, 2.875], dtype=np.float32)
 GRID_FREQ = 4.
 ARENA_OFFSET = 8. - ROBOT_RADIUS
 RESOLUTION = 0.05
