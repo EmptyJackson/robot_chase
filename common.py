@@ -189,8 +189,11 @@ class OccupancyGrid(object):
   def is_free(self, position):
     return self._values[self.get_index(position)] == FREE
 
-
+occ_grid = None
 def get_occupancy_grid():
+  if occ_grid != None:
+    return occ_grid
+
   dim = int(2 * ARENA_OFFSET / RESOLUTION)
   grid = np.zeros((dim, dim), dtype=np.int8)
 
@@ -200,7 +203,9 @@ def get_occupancy_grid():
       position = (position - (dim/2)) * RESOLUTION
       if collision(position):
         grid[x, y] = OCCUPIED
-  return OccupancyGrid(grid, [-ARENA_OFFSET, -ARENA_OFFSET, 0.], RESOLUTION)
+
+  occ_grid = OccupancyGrid(grid, [-ARENA_OFFSET, -ARENA_OFFSET, 0.], RESOLUTION)
+  return occ_grid
 
 def collision(position):
   # Arena
