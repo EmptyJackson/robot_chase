@@ -26,7 +26,9 @@ OCCUPIED = 2
 ROBOT_RADIUS = 0.105 / 2.
 GOAL_POSITION = np.array([1.5, 1.5], dtype=np.float32)  # Any orientation is good.
 START_POSE = np.array([-1.5, -1.5, 0.], dtype=np.float32)
-MAX_ITERATIONS = 200
+
+MIN_ITERATIONS = 200
+MAX_ITERATIONS = 1000
 
 
 def sample_random_position(occupancy_grid):
@@ -309,7 +311,7 @@ def rrt_star(start_pose, goal_position, occupancy_grid):
     print('Goal position is not in the free space.')
     return start_node, final_node
   graph.append(start_node)
-  for _ in range(MAX_ITERATIONS): 
+  for i in range(MAX_ITERATIONS): 
     position = sample_random_position(occupancy_grid)
     # With a random chance, draw the goal position.
     if np.random.rand() < .05:
@@ -358,13 +360,14 @@ def rrt_star(start_pose, goal_position, occupancy_grid):
     
     if np.linalg.norm(v.position - goal_position) < .2:
       final_node = v
-      #break
+      if i > MIN_ITERATIONS:
+        break
       
   return start_node, final_node
 
 
 def rrt_star_path(start_pose, goal_position, occupancy_grid):
-  start_node, final_node = rrt_star(start_position, goal_position, occupancy_grid)
+  start_node, final_node = rrt_star(start_pose, goal_position, occupancy_grid)
 
   path_nodes_rev = [final_node]
 
