@@ -20,6 +20,7 @@ from geometry_msgs.msg import Twist
 from sensor_msgs.msg import LaserScan
 # For groundtruth information.
 from gazebo_msgs.msg import ModelStates
+from gazebo_msgs.srv import DeleteModel
 from tf.transformations import euler_from_quaternion
 
 
@@ -65,8 +66,9 @@ def run(args):
   # Update control every 100 ms.
   rate_limiter = rospy.Rate(100)
   publisher = rospy.Publisher(rname + '/cmd_vel', Twist, queue_size=5)
+  del_model_prox = rospy.Serviceproxy('gazebo/delete_model', DeleteModel)
   # Keep track of groundtruth position for plotting purposes.
-  groundtruth = MultiGroundtruthPose(names=[rname])
+  groundtruth = MultiGroundtruthPose()
 
   path = None
 
@@ -77,6 +79,13 @@ def run(args):
       continue
 
     pose = groundtruth.poses[rname]
+
+    for cname in ['c0', 'c1' 'c2']:
+      cpose = groundtruth.poses[cname]
+      if np.linalg.norm(cpose[:2] - rpose[:2]) < CAPTURE_DISTANCE:
+        del_model_prox(rname)
+        return
+
 
     if path is None:
       rrt_star_path(pose, np.array([3, 3]), get_occupancy_grid())

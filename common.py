@@ -43,8 +43,10 @@ RESOLUTION = 0.05
 FREE = 0
 OCCUPIED = 2
 
+CAPTURE_DIST = 0.25
+
 class MultiGroundtruthPose(object):
-  def __init__(self, names):
+  def __init__(self, names=['c0', 'c1', 'c2', 'r0', 'r1', 'r2']):
     rospy.Subscriber('/gazebo/model_states', ModelStates, self.callback)
     poses = [np.array([np.nan, np.nan, np.nan], dtype=np.float32) for _ in range(len(names))]
     self._poses = dict(zip(names, poses))
