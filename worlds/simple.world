@@ -31,9 +31,14 @@
       </ode>
     </physics>
 
-    <!-- Load world -->
+    <!-- Load map -->
     <include>
-      <uri>model://simple_world</uri>
+      <uri>model://grid</uri>
+    </include>
+
+    <!-- Load obstacles -->
+    <include>
+      <uri>model://cylinders</uri>
     </include>
 
     <scene>
