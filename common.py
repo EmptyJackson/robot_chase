@@ -111,6 +111,23 @@ def get_velocity(position, path_points):
 
   return v
 
+def feedback_linearized(pose, velocity, epsilon):
+  u = 0.  # [m/s]
+  w = 0.  # [rad/s] going counter-clockwise.
+
+  # MISSING: Implement feedback-linearization to follow the velocity
+  # vector given as argument. Epsilon corresponds to the distance of
+  # linearized point in front of the robot.
+
+  theta = pose[YAW]
+  dxp = velocity[0]
+  dyp = velocity[1]
+
+  u = dxp * np.cos(theta) + dyp * np.sin(theta)
+  w = (-dxp * np.sin(theta) + dyp * np.cos(theta)) / epsilon
+
+  return u, w
+
 # Defines an occupancy grid.
 class OccupancyGrid(object):
   def __init__(self, values, origin, resolution):
