@@ -10,6 +10,7 @@ import rospy
 import random
 import math
 from common import *
+from rrt_improved import *
 
 # Robot motion commands:
 # http://docs.ros.org/api/geometry_msgs/html/msg/Twist.html
@@ -57,14 +58,17 @@ class GroundtruthPose(object):
 
 def run(args):
   runner_id = args.id
+  rname = 'r' + str(runner_id)
   rospy.init_node('runner_control' + str(runner_id))
 
 
   # Update control every 100 ms.
   rate_limiter = rospy.Rate(100)
-  publisher = rospy.Publisher('r' + str(runner_id) + '/cmd_vel', Twist, queue_size=5)
+  publisher = rospy.Publisher(rname + '/cmd_vel', Twist, queue_size=5)
   # Keep track of groundtruth position for plotting purposes.
-  groundtruth = MultiGroundtruthPose(names=['r0', 'r1'])
+  groundtruth = MultiGroundtruthPose(names=[rname])
+
+  path = None
 
   while not rospy.is_shutdown():
     # Make sure all measurements are ready.
@@ -72,9 +76,18 @@ def run(args):
       rate_limiter.sleep()
       continue
 
+    pose = groundtruth.poses[rname]
+
+    if path is None:
+      rrt_star_path(pose, np.array([3, 3]), get_occupancy_grid())
+
+    v = get_velocity(pose[:2], path)
+    u, w = feedback_linearized(pose, v, 0.1)
+  
+
     vel_msg = Twist()
-    vel_msg.linear.x = 1
-    vel_msg.angular.z = 0.1
+    vel_msg.linear.x = u
+    vel_msg.angular.z = w
     publisher.publish(vel_msg)
 
     rate_limiter.sleep()
@@ -82,7 +95,7 @@ def run(args):
 
 if __name__ == '__main__':
   parser = argparse.ArgumentParser(description='Runners control')
-  parser.add_argument('--id', action='store', default='41', help='Method.')
+  parser.add_argument('--id', action='store', default='-1', help='Method.')
   args, unknown = parser.parse_known_args()
   try:
     run(args)
