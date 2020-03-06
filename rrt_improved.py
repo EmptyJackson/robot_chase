@@ -37,8 +37,6 @@ def sample_random_position(occupancy_grid):
   o_x = occupancy_grid.origin[0]
   o_y = occupancy_grid.origin[1]
   
-  
-  
   position[0] = np.random.random() * width + o_x
   position[1] = np.random.random() * height + o_y
 
@@ -46,7 +44,6 @@ def sample_random_position(occupancy_grid):
     position[0] = np.random.random() * width + o_x
     position[1] = np.random.random() * height + o_y
   
-
   return position
 
 

@@ -55,4 +55,42 @@ class MultiGroundtruthPose(object):
   def poses(self):
     return self._poses
 
+def get_velocity(position, path_points):
+  v = np.zeros_like(position)
+  if len(path_points) == 0:
+    return v
+  # Stop moving if the goal is reached.
+  if np.linalg.norm(position - path_points[-1]) < .2:
+    return v
+
+  closestIndex = -1
+  closest = 99999
+
+  for pIndex in range(len(path_points)):
+    pp = path_points[pIndex]
+
+    d = np.linalg.norm(pp - position)
+    if d < closest:
+      closest = d
+      closestIndex = pIndex
+
+  if closestIndex == 0:
+    d_prev = 9999
+  else:
+    d_prev = np.linalg.norm(path_points[closestIndex-1] - position)
+
+  if closestIndex == len(path_points)-1:
+    d_next = 9999
+  else:
+    d_next = np.linalg.norm(path_points[closestIndex+1] - position)
+
+  if d_prev < d_next:
+    v = path_points[closestIndex] - position
+  else:
+    v = path_points[closestIndex+1] - position
+
+  v /= np.linalg.norm(v)
+  v *= SPEED
+
+  return v
 
