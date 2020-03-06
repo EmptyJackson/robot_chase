@@ -6,7 +6,9 @@ from __future__ import print_function
 
 import argparse
 import numpy as np
-import scipy
+import matplotlib.pylab as plt
+import matplotlib.patches as patches
+import scipy.signal
 import rospy
 import random
 import math
@@ -194,7 +196,7 @@ def get_occupancy_grid():
       position = (position - (dim/2)) * 2
       if collision(position):
         grid[x, y] = OCCUPIED
-  return OccupancyGrid(grid, [dim/2, dim/2], RESOLUTION)
+  return OccupancyGrid(grid, [-ARENA_OFFSET, -ARENA_OFFSET, 0.], RESOLUTION)
 
 def collision(position):
   # Arena
@@ -207,6 +209,15 @@ def collision(position):
       return True
 
   rel_pos = position % GRID_FREQ
-  return np.all(np.logical_or(
-    position < WALL_WIDTH,
-    position > GRID_FREQ - WALL_WIDTH))
+  on_edge = np.logical_or(
+    rel_pos < WALL_WIDTH,
+    rel_pos > GRID_FREQ - WALL_WIDTH)
+  
+  in_door = np.logical_and(
+    rel_pos > DOOR_BOUNDS[0],
+    rel_pos < DOOR_BOUNDS[1])
+  return np.any(np.logical_and(on_edge, np.logical_not(in_door)))
+
+if __name__=='__main__':
+  get_occupancy_grid().draw()
+  plt.show()
