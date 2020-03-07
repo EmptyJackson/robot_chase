@@ -5,10 +5,12 @@ import argparse
 import numpy as np
 from common import *
 
+from sensor_msgs.msg import PointCloud
 from geometry_msgs.msg import PoseArray, Pose, Point
 
 OCC_GRID = get_occupancy_grid()
 NUM_CLOUD_POINTS = 25
+PUBLISH_PARTICLES = True  # Publish particles for RViz
 
 def in_line_of_sight(p1, p2):
   sample_rate = 10 # Samples per meter
@@ -81,6 +83,10 @@ class ParticleCloud:
         pos = random.sample(self._particles, 1)[0].position
         self._particles.add(particle(self._max_speed, chasers, pos))
 
+  def get_positions(self):
+    for particle in self._particles:
+      yield particle.position
+
 
 def simple(poses):
   # Return paths as array of Point
@@ -103,10 +109,14 @@ def run(args):
   # Update paths every 100 ms.
   rate_limiter = rospy.Rate(10)
   publishers = [rospy.Publisher('/c'+str(i)+'/path', PoseArray, queue_size=1) for i in range(3)]
+  if PUBLISH_PARTICLES:
+    particle_publisher = rospy.Publisher('/Particles', PointCloud, queue_size=1)
 
   gts = MultiGroundtruthPose(['c0', 'c1', 'c2', 'r0', 'r1', 'r2'])
   runner_ests = {'r0':None, 'r1':None, 'r2':None}
   last_seen = {'r0':None, 'r1':None, 'r2':None}
+
+  frame_id = 0
   while not rospy.is_shutdown():
     # Make sure all groundtruths are ready.
     if not gts.ready:
@@ -143,7 +153,24 @@ def run(args):
       path_msg = create_pose_array(path)
       publisher.publish(path_msg)
 
+    # Publish localization particles
+    if PUBLISH_PARTICLES:
+      particle_msg = PointCloud()
+      particle_msg.header.seq = frame_id
+      particle_msg.header.stamp = rospy.Time.now()
+      particle_msg.header.frame_id = '/odom'
+      for r_est in runner_ests:
+        for p in r_est.get_positions:
+          pt = Point32()
+          pt.x = p[X]
+          pt.y = p[Y]
+          pt.z = .05
+          particle_msg.points.append(pt)
+      particle_publisher.publish(particle_msg)
+
+
     rate_limiter.sleep()
+    frame_id += 1
 
 
 if __name__ == '__main__':
