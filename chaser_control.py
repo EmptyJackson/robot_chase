@@ -123,17 +123,18 @@ def run(args):
       for c_pos in chaser_positions:
         if in_line_of_sight(r_pos, c_pos):
           runner_ests[r] = None
+          last_seen[r] = r_pos
           visible = True
           break
-      if visible:
-        runner_ests[r] = None
-      else:
+      if not visible:
         if runner_ests[r] is None:
           if last_seen[r] is None:
             runner_ests[r] = ParticleCloud(NUM_CLOUD_POINTS, CHASER_SPEED, chaser_positions)
           else:
             runner_ests[r] = ParticleCloud(
               NUM_CLOUD_POINTS, CHASER_SPEED, chaser_positions, last_seen[r])
+        else:
+          runner_ests[r].update(chaser_positions)
 
     # todo: Calculate paths
     paths = nav_method(gts.poses)
