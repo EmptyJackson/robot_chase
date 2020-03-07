@@ -27,8 +27,8 @@ ROBOT_RADIUS = 0.105 / 2.
 GOAL_POSITION = np.array([1.5, 1.5], dtype=np.float32)  # Any orientation is good.
 START_POSE = np.array([-1.5, -1.5, 0.], dtype=np.float32)
 
-MIN_ITERATIONS = 200
-MAX_ITERATIONS = 1000
+MIN_ITERATIONS = 100
+MAX_ITERATIONS = 2000
 
 
 def sample_random_position(occupancy_grid):
@@ -399,6 +399,8 @@ def rrt_star(start_pose, goal_position, occupancy_grid):
   MAX_DISTANCE_BETWEEN_NODES = 1.5
 
   sample_grid = SampleGrid(world_size, occupancy_grid.origin, MAX_DISTANCE_BETWEEN_NODES)
+
+  found = False
   
   if not occupancy_grid.is_free(goal_position):
     print('Goal position is not in the free space.')
@@ -460,8 +462,10 @@ def rrt_star(start_pose, goal_position, occupancy_grid):
     
     if np.linalg.norm(v.position - goal_position) < .2:
       final_node = v
-      if i > MIN_ITERATIONS:
-        break
+      found = True
+    
+    if i > MIN_ITERATIONS and found:
+      break
       
   return start_node, final_node
 
