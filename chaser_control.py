@@ -8,6 +8,7 @@ from common import *
 from geometry_msgs.msg import PoseArray, Pose, Point
 
 OCC_GRID = get_occupancy_grid()
+NUM_CLOUD_POINTS = 25
 
 def in_line_of_sight(p1, p2):
   sample_rate = 10 # Samples per meter
@@ -80,6 +81,7 @@ class ParticleCloud:
         pos = random.sample(self._particles, 1)[0].position
         self._particles.add(particle(self._max_speed, chasers, pos))
 
+
 def simple(poses):
   # Return paths as array of Point
   pass
@@ -103,14 +105,35 @@ def run(args):
   publishers = [rospy.Publisher('/c'+str(i)+'/path', PoseArray, queue_size=1) for i in range(3)]
 
   gts = MultiGroundtruthPose(['c0', 'c1', 'c2', 'r0', 'r1', 'r2'])
-
+  runner_ests = {'r0':None, 'r1':None, 'r2':None}
+  last_seen = {'r0':None, 'r1':None, 'r2':None}
   while not rospy.is_shutdown():
     # Make sure all groundtruths are ready.
     if not gts.ready:
       rate_limiter.sleep()
       continue
 
-    print(gts.poses)
+    chaser_positions = []
+    for c in ['c0', 'c1', 'c2']:
+      chaser_positions = gts.poses[c][:2]
+
+    for r in ['r0', 'r1', 'r2']:
+      r_pos = gts.poses[r][:2]
+      visible = False
+      for c_pos in chaser_positions:
+        if in_line_of_sight(r_pos, c_pos):
+          runner_ests[r] = None
+          visible = True
+          break
+      if visible:
+        runner_ests[r] = None
+      else:
+        if runner_ests[r] is None:
+          if last_seen[r] is None:
+            runner_ests[r] = ParticleCloud(NUM_CLOUD_POINTS, CHASER_SPEED, chaser_positions)
+          else:
+            runner_ests[r] = ParticleCloud(
+              NUM_CLOUD_POINTS, CHASER_SPEED, chaser_positions, last_seen[r])
 
     # todo: Calculate paths
     paths = nav_method(gts.poses)
