@@ -195,7 +195,7 @@ def get_occupancy_grid():
   if occ_grid != None:
     return occ_grid
 
-  dim = int(2 * ARENA_OFFSET / RESOLUTION)
+  dim = int(2 * ARENA_OFFSET / RESOLUTION) + 10 # Add border
   grid = np.zeros((dim, dim), dtype=np.int8)
 
   for x in range(dim):
