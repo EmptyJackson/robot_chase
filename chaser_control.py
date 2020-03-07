@@ -60,12 +60,12 @@ class ParticleCloud:
     else:
       self._particles = set()
       for _ in range(self._num_points):
-        self._particles.append(Particle(self._max_speed, chasers, start_pos))
+        self._particles.add(Particle(self._max_speed, chasers, start_pos))
 
   def reset(self, chasers):
     self._particles = set()
     for _ in range(self._num_points):
-      self._particles.append(Particle(self._max_speed, chasers))
+      self._particles.add(Particle(self._max_speed, chasers))
 
   def update(self, chasers):
     invalid_ps = set()
@@ -89,7 +89,7 @@ class ParticleCloud:
       yield particle.position
 
   def get_random_position(self):
-    return self._particles[np.random.randint(self._num_points)].position
+    return random.sample(self._particles, 1)[0].position
 
 
 def position_to_point(position):
@@ -120,7 +120,7 @@ def rrt(poses, allocations, runner_ests):
     else:
       # Sample random position from point cloud
       goal_position = runner_ests[target_runner].get_random_position()
-    path, _, _ = rrt_star_path(start_pose, goal_position, occupancy_grid)
+    path, _, _ = rrt_star_path(start_pose, goal_position, occupancy_grid, PotentialField({}))
     paths[c] = []
     for point in path:
       paths[c].append(position_to_point(point))
@@ -168,6 +168,8 @@ def run(args):
       visible = False
       for c_pos in chaser_positions:
         if in_line_of_sight(r_pos, c_pos):
+          if not visible:
+            print(r + ' at ' + str(r_pos) + 'found by chaser at ' + str(c_pos) + '.')
           runner_ests[r] = None
           last_seen[r] = r_pos
           visible = True

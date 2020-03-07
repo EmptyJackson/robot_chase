@@ -32,8 +32,8 @@
   <arg name="chaser_1_z_pos" default=" 0.0"/>
   <arg name="chaser_1_yaw"   default=" 0.0"/>
 
-  <arg name="chaser_2_x_pos" default="-2.0"/>
-  <arg name="chaser_2_y_pos" default="-2.0"/>
+  <arg name="chaser_2_x_pos" default=" 2.0"/>
+  <arg name="chaser_2_y_pos" default=" 6.0"/>
   <arg name="chaser_2_z_pos" default=" 0.0"/>
   <arg name="chaser_2_yaw"   default=" 0.0"/>
 
