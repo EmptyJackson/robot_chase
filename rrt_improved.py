@@ -30,7 +30,7 @@ START_POSE = np.array([-1.5, -1.5, 0.], dtype=np.float32)
 
 MIN_ITERATIONS = 300
 MAX_ITERATIONS = 2000
-OPEN_ITERATIONS = 200
+OPEN_ITERATIONS = 2000
 
 
 def sample_random_position(occupancy_grid):
@@ -397,6 +397,11 @@ class Node(object):
     for n in self.neighbors:
       n.kill()
 
+  def steps(self):
+    if not self.parent:
+      return 1
+    return 1 + self.parent.steps()
+
 
 def rrt_star(start_pose, goal_position, occupancy_grid, potential_field, is_open=False):  
   # RRT builds a graph one node at a time.
@@ -490,7 +495,7 @@ def rrt_star(start_pose, goal_position, occupancy_grid, potential_field, is_open
 
     for node in graph:
       if node.pf_sum < ld_val:
-        ld_val = node.pf_sum
+        ld_val = node.pf_sum / node.steps()
         ld_node = node
     print(ld_node.position)
         
