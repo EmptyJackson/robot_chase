@@ -10,27 +10,24 @@ from geometry_msgs.msg import Twist, PoseArray
 from gazebo_msgs.msg import ModelStates
 from tf.transformations import euler_from_quaternion
 
-from common import MultiGroundtruthPose
+from common import *
 
 class PathSubscriber(object):
   def __init__(self, name='c0'):
     rospy.Subscriber('/'+name+'/path', PoseArray, self.callback)
-    self._path = []
+    self._path = None
 
   def callback(self, msg):
     self._path = [pose.position for pose in msg.poses]
 
   @property
   def ready(self):
-    return not np.isnan(self._path[0])
+    return not self._path is None
 
   @property
   def path(self):
     return self._path
 
-
-def path_follow(path, position):
-  pass
 
 def run(args):
   c_id = args.id
@@ -42,16 +39,17 @@ def run(args):
   publisher = rospy.Publisher('/' + c_name + '/cmd_vel', Twist, queue_size=5)
 
   groundtruth = MultiGroundtruthPose([c_name])
-  path = PathSubscriber(c_name)
+  path_sub = PathSubscriber(c_name)
 
   while not rospy.is_shutdown():
     # Make sure all measurements are ready.
-    if not groundtruth.ready or not path.ready:
+    if not groundtruth.ready or not path_sub.ready:
       rate_limiter.sleep()
       continue
 
     # Calculate and publish control inputs.
-    u, w = path_follow(path, groundtruth.poses[0])
+    v = get_velocity(groundtruth.poses[c_name][:2], path_sub.path)
+    u, w = feedback_linearized(pose, v, 0.1)
     vel_msg = Twist()
     vel_msg.linear.x = u
     vel_msg.angular.z = w

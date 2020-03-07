@@ -88,9 +88,18 @@ class ParticleCloud:
       yield particle.position
 
 
-def simple(poses):
+def simple(poses, allocations, runner_ests):
+  paths = {}
+  for r in ['r0', 'r1', 'r2']:
+    goal = poses[allocations][::2]
+    p = Point()
+    p.x = goal[X]
+    p.y = goal[Y]
+    p.z = 0.
+    paths[r] = [p]
+
   # Return paths as array of Point
-  pass
+  return paths
 
 def create_pose_array(path):
   pose_path = []
@@ -149,7 +158,7 @@ def run(args):
 
     # Calculate paths
     allocations = {'c0':'r0', 'c1':'r1', 'c2':'r2'}
-    paths = nav_method(gts.poses, allocations)
+    paths = nav_method(gts.poses, allocations, runner_ests)
 
     # Publish chaser paths
     for path, publisher in zip(paths, publishers):
