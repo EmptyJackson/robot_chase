@@ -28,7 +28,7 @@ GOAL_POSITION = np.array([1.5, 1.5], dtype=np.float32)  # Any orientation is goo
 START_POSE = np.array([-1.5, -1.5, 0.], dtype=np.float32)
 
 MIN_ITERATIONS = 200
-MAX_ITERATIONS = 5000
+MAX_ITERATIONS = 1000
 
 
 def sample_random_position(occupancy_grid):
@@ -145,6 +145,90 @@ def find_angle(A, B, theta):
 
     return beta, C, r, A_clockwise
 
+
+class SampleGrid(object):
+
+  def __init__(self, world_size, world_origin, tile_size):
+    self.world_size = world_size
+    self.world_origin = world_origin
+    self.tile_size = tile_size
+
+    self.grid_size = np.ceil(world_size / tile_size).astype(int)
+
+    self.grid = [[[] for y in range(self.grid_size[1])] for x in range(self.grid_size[0])]
+
+    self.possible_sampling_tiles = []
+
+    w = self.grid_to_world([11, 5])
+    
+    print(self.world_to_grid(w), w)
+
+  def world_to_grid(self, position):
+    pos = position - self.world_origin
+    indexes = np.floor(pos / self.tile_size)
+    index = np.array([int(indexes[0]), int(indexes[1])]).astype(int)
+    return index
+
+  def grid_to_world(self, index):
+    return (np.array(index, dtype=np.float32) * self.tile_size) + self.world_origin
+    
+
+  def add_node(self, node):
+    index = self.world_to_grid(node.position)
+    try:
+      self.grid[index[0]][index[1]].append(node)
+    except:
+      print('!!!', index, node.position)
+      raise
+    
+    if len(self.grid[index[0]][index[1]]) == 1:
+      print('new', index)
+      for lx in [-1, 0, 1]:
+        for ly in [-1, 0, 1]:
+          x = index[0] + lx
+          y = index[1] + ly
+
+          if self.in_bounds(x, y):
+            if not [x, y] in self.possible_sampling_tiles:
+              self.possible_sampling_tiles.append([x, y])
+    
+
+            
+  def in_bounds(self, x, y):
+    return x >= 0 and x < self.grid_size[0] and y >= 0 and y < self.grid_size[1]
+
+  def get_close_nodes(self, position):
+    nodes = []
+    index = self.world_to_grid(position)
+    
+    for lx in [-1, 0, 1]:
+      for ly in [-1, 0, 1]:
+        x = index[0] + lx
+        y = index[1] + ly
+
+        if self.in_bounds(x, y):
+          for node in self.grid[x][y]:
+            nodes.append(node)
+
+    return nodes
+
+  def rpoint(self):
+    ti = np.random.randint(len(self.possible_sampling_tiles))
+    tile = self.possible_sampling_tiles[ti]
+    #print(tile)
+
+    base_position = self.grid_to_world(tile)
+
+    position = np.array(base_position, dtype=np.float32) + (np.random.random(2) * self.tile_size)
+    #print(tile, base_position, position)
+    return position
+
+  def sample_random_point(self, occupancy_grid):
+    position = self.rpoint()
+    while not occupancy_grid.is_free(position):
+      position = self.rpoint()
+
+    return position
 
 # Defines an occupancy grid.
 class OccupancyGrid(object):
@@ -307,15 +391,27 @@ def rrt_star(start_pose, goal_position, occupancy_grid):
   graph = []
   start_node = Node(start_pose)
   final_node = None
+
+  world_width = len(occupancy_grid.values) * occupancy_grid.resolution
+  world_height = len(occupancy_grid.values[0]) * occupancy_grid.resolution
+  world_size = np.array([world_width, world_height], dtype=np.float32)
+
+  MAX_DISTANCE_BETWEEN_NODES = 1.5
+
+  sample_grid = SampleGrid(world_size, occupancy_grid.origin, MAX_DISTANCE_BETWEEN_NODES)
+  
   if not occupancy_grid.is_free(goal_position):
     print('Goal position is not in the free space.')
     return start_node, final_node
+  
   graph.append(start_node)
+  sample_grid.add_node(start_node)
+
   for i in range(MAX_ITERATIONS):
     if i % 100 == 0:
       print(i)
     
-    position = sample_random_position(occupancy_grid)
+    position = sample_grid.sample_random_point(occupancy_grid)
     # With a random chance, draw the goal position.
     if np.random.rand() < .05:
       position = goal_position
@@ -329,7 +425,7 @@ def rrt_star(start_pose, goal_position, occupancy_grid):
     for n, d in potential_parent:
       if d < .2:
         break
-      if d > .2 and d < 1.5 and n.direction.dot(position - n.position) / d > 0.70710678118:
+      if d > .2 and d < MAX_DISTANCE_BETWEEN_NODES and n.direction.dot(position - n.position) / d > 0.70710678118:
         beta, arc_length = find_angle_with_obstacles(n.pose[:2], position, n.pose[2], occupancy_grid)
 
         if not beta is None:
@@ -349,7 +445,7 @@ def rrt_star(start_pose, goal_position, occupancy_grid):
     u.add_neighbor(v)
     v.parent = u
     
-    for node in graph:
+    for node in sample_grid.get_close_nodes(v.pose[:2]):
       beta, arc_length = find_angle_with_obstacles(v.pose[:2], node.pose[:2], v.pose[2], occupancy_grid)
       if not beta is None:
         if arc_length < node.local_cost:
@@ -360,6 +456,7 @@ def rrt_star(start_pose, goal_position, occupancy_grid):
         graph.remove(node)
     
     graph.append(v)
+    sample_grid.add_node(v)
     
     if np.linalg.norm(v.position - goal_position) < .2:
       final_node = v
@@ -371,6 +468,9 @@ def rrt_star(start_pose, goal_position, occupancy_grid):
 
 def rrt_star_path(start_pose, goal_position, occupancy_grid):
   start_node, final_node = rrt_star(start_pose, goal_position, occupancy_grid)
+
+  if final_node is None:
+    return [], start_node, final_node
 
   path_nodes_rev = [final_node]
 
