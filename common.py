@@ -9,6 +9,7 @@ import numpy as np
 import matplotlib.pylab as plt
 import matplotlib.patches as patches
 import scipy.signal
+import scipy.stats
 import rospy
 import random
 import math
@@ -188,8 +189,12 @@ class OccupancyGrid(object):
   def is_free(self, position):
     return self._values[self.get_index(position)] == FREE
 
-
+occ_grid = None
 def get_occupancy_grid():
+  global occ_grid
+  if occ_grid != None:
+    return occ_grid
+
   dim = int(2 * ARENA_OFFSET / RESOLUTION)
   grid = np.zeros((dim, dim), dtype=np.int8)
 
@@ -199,7 +204,9 @@ def get_occupancy_grid():
       position = (position - (dim/2)) * RESOLUTION
       if collision(position):
         grid[x, y] = OCCUPIED
-  return OccupancyGrid(grid, [-ARENA_OFFSET, -ARENA_OFFSET, 0.], RESOLUTION)
+
+  occ_grid = OccupancyGrid(grid, [-ARENA_OFFSET, -ARENA_OFFSET, 0.], RESOLUTION)
+  return occ_grid
 
 def collision(position):
   # Arena
@@ -223,6 +230,18 @@ def collision(position):
   in_door[0] = in_door[1]
   in_door[1] = tmp
   return np.any(np.logical_and(on_edge, np.logical_not(in_door)))
+
+class VecField:
+  def __init__(self, targets, sigma):
+    self.targets = targets
+    self.sigma = sigma
+
+  def weight(self, position):
+    weight = 0.
+    for target in self.targets:
+      weight += scipy.stats.norm.pdf(
+        np.linalg.norm(position - target),0, self.sigma)
+    return weight
 
 if __name__=='__main__':
   get_occupancy_grid().draw()
