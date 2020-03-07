@@ -4,6 +4,7 @@ import random
 import argparse
 import numpy as np
 from common import *
+from rrt_improved import *
 
 from sensor_msgs.msg import PointCloud
 from geometry_msgs.msg import PoseArray, Pose, Point
@@ -87,18 +88,42 @@ class ParticleCloud:
     for particle in self._particles:
       yield particle.position
 
+  def get_random_position(self):
+    return self._particles[np.random.randint(self._num_points)].position
+
+
+def position_to_point(position):
+  p = Point()
+  p.x = position[X]
+  p.y = position[Y]
+  p.z = 0.
+  return p
 
 def simple(poses, allocations, runner_ests):
   paths = {}
   for c in ['c0', 'c1', 'c2']:
     goal = poses[allocations[c]][:2]
-    p = Point()
-    p.x = goal[X]
-    p.y = goal[Y]
-    p.z = 0.
-    paths[c] = [p]
+    paths[c] = [position_to_point(goal)]
 
   # Return paths as array of Point
+  return paths
+
+def rrt(poses, allocations, runner_ests):
+  occupancy_grid = get_occupancy_grid()
+  paths = {}
+  for c in ['c0', 'c1', 'c2']:
+    start_pose = poses[c]
+    # Estimate or get goal position
+    target_runner = allocations[c]
+    if runner_ests[target_runner] is None:
+      goal_position = poses[target_runner][:2]
+    else:
+      # Sample random position from point cloud
+      goal_position = runner_ests[target_runner].get_random_position()
+    path, _, _ = rrt_star_path(start_pose, goal_position, occupancy_grid)
+    paths[c] = []
+    for point in path:
+      paths[c].append(position_to_point(point))
   return paths
 
 def create_pose_array(path):
@@ -125,6 +150,8 @@ def run(args):
   last_seen = {'r0':None, 'r1':None, 'r2':None}
 
   frame_id = 0
+
+  print('Chaser controller initialized.')
   while not rospy.is_shutdown():
     # Make sure all groundtruths are ready.
     if not gts.ready:
@@ -186,7 +213,7 @@ def run(args):
 
 if __name__ == '__main__':
   parser = argparse.ArgumentParser(description='Runs centralised chaser control')
-  parser.add_argument('--mode', action='store', default='simple', help='Routing method.', choices=['simple'])
+  parser.add_argument('--mode', action='store', default='simple', help='Routing method.', choices=['simple', 'rrt'])
   args, unknown = parser.parse_known_args()
   try:
     run(args)
