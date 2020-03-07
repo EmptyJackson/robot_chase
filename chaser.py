@@ -18,7 +18,7 @@ class PathSubscriber(object):
     self._path = None
 
   def callback(self, msg):
-    self._path = [pose.position for pose in msg.poses]
+    self._path = np.array([[pose.position.x, pose.position.y] for pose in msg.poses])
 
   @property
   def ready(self):
@@ -48,7 +48,8 @@ def run(args):
       continue
 
     # Calculate and publish control inputs.
-    v = get_velocity(groundtruth.poses[c_name][:2], path_sub.path)
+    pose = groundtruth.poses[c_name]
+    v = get_velocity(pose[:2], path_sub.path)
     u, w = feedback_linearized(pose, v, 0.1)
     vel_msg = Twist()
     vel_msg.linear.x = u

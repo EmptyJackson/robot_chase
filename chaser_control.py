@@ -90,13 +90,13 @@ class ParticleCloud:
 
 def simple(poses, allocations, runner_ests):
   paths = {}
-  for r in ['r0', 'r1', 'r2']:
-    goal = poses[allocations][::2]
+  for c in ['c0', 'c1', 'c2']:
+    goal = poses[allocations[c]][:2]
     p = Point()
     p.x = goal[X]
     p.y = goal[Y]
     p.z = 0.
-    paths[r] = [p]
+    paths[c] = [p]
 
   # Return paths as array of Point
   return paths
@@ -107,8 +107,7 @@ def create_pose_array(path):
     p = Pose()
     p.position = position
     pose_path.append(p)
-  path_msg = PoseArray()
-  path_msg.poses = pose_path
+  path_msg = PoseArray(poses=pose_path)
   return path_msg
 
 def run(args):
@@ -117,7 +116,7 @@ def run(args):
 
   # Update paths every 100 ms.
   rate_limiter = rospy.Rate(10)
-  publishers = [rospy.Publisher('/c'+str(i)+'/path', PoseArray, queue_size=1) for i in range(3)]
+  publishers = {'c'+str(i): rospy.Publisher('/c'+str(i)+'/path', PoseArray, queue_size=1) for i in range(3)}
   if PUBLISH_PARTICLES:
     particle_publisher = rospy.Publisher('/Particles', PointCloud, queue_size=1)
 
@@ -134,7 +133,7 @@ def run(args):
 
     chaser_positions = []
     for c in ['c0', 'c1', 'c2']:
-      chaser_positions = gts.poses[c][:2]
+      chaser_positions.append(gts.poses[c][:2])
 
     # Update estimated runner positions
     for r in ['r0', 'r1', 'r2']:
@@ -161,9 +160,9 @@ def run(args):
     paths = nav_method(gts.poses, allocations, runner_ests)
 
     # Publish chaser paths
-    for path, publisher in zip(paths, publishers):
-      path_msg = create_pose_array(path)
-      publisher.publish(path_msg)
+    for c in ['c0', 'c1', 'c2']:
+      path_msg = create_pose_array(paths[c])
+      publishers[c].publish(path_msg)
 
     # Publish localization particles
     if PUBLISH_PARTICLES:

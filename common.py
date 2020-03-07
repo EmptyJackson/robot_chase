@@ -99,7 +99,6 @@ def get_velocity(position, path_points):
   speed = 0.5
   next_pt = min(best_pt+1, len(path_points)-1)
   v = path_points[next_pt] - position
-  print(path_points[next_pt], position, i)
   return v * speed / np.linalg.norm(v)
 
 def get_velocity_mikey(position, path_points):
