@@ -254,17 +254,20 @@ def collision(position):
   in_door[1] = tmp
   return np.any(np.logical_and(on_edge, np.logical_not(in_door)))
 
-class VecField:
-  def __init__(self, targets, sigma):
+class PotentialField:
+  def __init__(self, targets):
+    # targets = {name : [position, sigma, magnitude], ...}
     self.targets = targets
-    self.sigma = sigma
 
-  def weight(self, position):
+  def sample(self, position):
     weight = 0.
-    for target in self.targets:
+    for target in self.targets.values():
       weight += scipy.stats.norm.pdf(
-        np.linalg.norm(position - target),0, self.sigma)
+        np.linalg.norm(position - target[0]), 0, target[1]) * target[2]
     return weight
+
+  def update_target(self, name, position):
+    self.targets[name][0] = position
 
 if __name__=='__main__':
   get_occupancy_grid().draw()

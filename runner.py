@@ -62,17 +62,25 @@ def run(args):
   rname = 'r' + str(runner_id)
   rospy.init_node('runner_control' + str(runner_id))
 
+  other_runners = ['r0', 'r1', 'r2'].remove(rname)
+  chasers = ['c0', 'c1', 'c2']
 
-  # Update control every 100 ms.
+  # Update control every 10 ms.
   rate_limiter = rospy.Rate(100)
   publisher = rospy.Publisher(rname + '/cmd_vel', Twist, queue_size=5)
   # Keep track of groundtruth position for plotting purposes.
-  groundtruth = MultiGroundtruthPose(names=[rname])
+  groundtruth = MultiGroundtruthPose(names=([rname] + chasers))
 
   path = None
 
   occupancy_grid = get_occupancy_grid()
 
+  pf_targets = {}
+  for chaser in chasers:
+    pf_targets[chaser] = [np.array([0, 0], dtype=np.float32), 1., 1.]
+  
+  potential_field = PotentialField(pf_targets)
+  
   while not rospy.is_shutdown():
     # Make sure all measurements are ready.
     if not groundtruth.ready:
@@ -81,8 +89,11 @@ def run(args):
 
     pose = groundtruth.poses[rname]
 
+    for chaser in chasers:
+      potential_field.update_target(chaser, groundtruth.poses[chaser][:2])
+
     if path is None:
-      path, s, g = rrt_star_path(pose, np.array([6, 2]), occupancy_grid)
+      path, s, g = rrt_star_path(pose, np.array([6, 2]), occupancy_grid, potential_field, is_open=True)
 
       fig, ax = plt.subplots()
       occupancy_grid.draw()

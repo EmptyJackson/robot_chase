@@ -12,6 +12,7 @@ import scipy.signal
 import yaml
 import math
 
+from common import *
 
 # Constants used for indexing.
 X = 0
@@ -27,8 +28,9 @@ ROBOT_RADIUS = 0.105 / 2.
 GOAL_POSITION = np.array([1.5, 1.5], dtype=np.float32)  # Any orientation is good.
 START_POSE = np.array([-1.5, -1.5, 0.], dtype=np.float32)
 
-MIN_ITERATIONS = 100
+MIN_ITERATIONS = 300
 MAX_ITERATIONS = 2000
+OPEN_ITERATIONS = 200
 
 
 def sample_random_position(occupancy_grid):
@@ -300,6 +302,9 @@ class Node(object):
     self.local_cost = 0
     self.killed = False
 
+    self.pf_sum = 0
+    self.pf_local = 0
+
   @property
   def pose(self):
     return self._pose
@@ -340,7 +345,7 @@ class Node(object):
     self._cost = c
 
 
-  def update_parent(self, new_parent, new_local_cost, occupancy_grid):
+  def update_parent(self, new_parent, new_local_cost, occupancy_grid, potential_field):
     if self.neighbors:
       return
     if self.killed:
@@ -353,6 +358,9 @@ class Node(object):
     self.cost = self.parent.cost + new_local_cost
     self.local_cost = new_local_cost
 
+    self.pf_local = potential_field.sample(self.pose[:2])
+    self.pf_sum = self.parent.pf_sum + self.pf_local
+
     try:
       self._pose = adjust_pose(self.parent, self.pose[:2], occupancy_grid).pose
     except:
@@ -363,6 +371,10 @@ class Node(object):
       n.update_prev_cost(self.cost, occupancy_grid)
 
   def update_prev_cost(self, new_prev_cost, occupancy_grid):
+    # Not being used
+    print('error! - update_prev_cost shouldnt be used')
+    return
+    
     if self.killed:
       return
     
@@ -386,10 +398,11 @@ class Node(object):
       n.kill()
 
 
-def rrt_star(start_pose, goal_position, occupancy_grid):  
+def rrt_star(start_pose, goal_position, occupancy_grid, potential_field, is_open=False):  
   # RRT builds a graph one node at a time.
   graph = []
   start_node = Node(start_pose)
+  start_node.pf_sum = potential_field.sample(start_pose[:2])
   final_node = None
 
   world_width = len(occupancy_grid.values) * occupancy_grid.resolution
@@ -409,13 +422,13 @@ def rrt_star(start_pose, goal_position, occupancy_grid):
   graph.append(start_node)
   sample_grid.add_node(start_node)
 
-  for i in range(MAX_ITERATIONS):
+  for i in range(OPEN_ITERATIONS if is_open else MAX_ITERATIONS):
     if i % 100 == 0:
       print(i)
     
     position = sample_grid.sample_random_point(occupancy_grid)
     # With a random chance, draw the goal position.
-    if np.random.rand() < .05:
+    if np.random.rand() < .05 and not is_open:
       position = goal_position
     # Find closest node in graph.
     # In practice, one uses an efficient spatial structure (e.g., quadtree).
@@ -444,6 +457,7 @@ def rrt_star(start_pose, goal_position, occupancy_grid):
       continue
         
     
+    
     u.add_neighbor(v)
     v.parent = u
     
@@ -451,7 +465,10 @@ def rrt_star(start_pose, goal_position, occupancy_grid):
       beta, arc_length = find_angle_with_obstacles(v.pose[:2], node.pose[:2], v.pose[2], occupancy_grid)
       if not beta is None:
         if arc_length < node.local_cost:
-          node.update_parent(v, arc_length, occupancy_grid)
+          node.update_parent(v, arc_length, occupancy_grid, potential_field)
+
+    v.pf_local = potential_field.sample(v.position)
+    v.pf_sum = v.pf_local + u.pf_sum
 
     for node in graph[:]:
       if node.killed:
@@ -460,18 +477,30 @@ def rrt_star(start_pose, goal_position, occupancy_grid):
     graph.append(v)
     sample_grid.add_node(v)
     
-    if np.linalg.norm(v.position - goal_position) < .2:
+    if np.linalg.norm(v.position - goal_position) < .2 and not is_open:
       final_node = v
       found = True
     
     if i > MIN_ITERATIONS and found:
       break
-      
-  return start_node, final_node
+
+  if is_open:
+    ld_node = None
+    ld_val = np.inf
+
+    for node in graph:
+      if node.pf_sum < ld_val:
+        ld_val = node.pf_sum
+        ld_node = node
+    print(ld_node.position)
+        
+    return start_node, ld_node
+  else:
+    return start_node, final_node
 
 
-def rrt_star_path(start_pose, goal_position, occupancy_grid):
-  start_node, final_node = rrt_star(start_pose, goal_position, occupancy_grid)
+def rrt_star_path(start_pose, goal_position, occupancy_grid, potential_field, is_open=False):
+  start_node, final_node = rrt_star(start_pose, goal_position, occupancy_grid, potential_field, is_open)
 
   if final_node is None:
     return [], start_node, final_node
