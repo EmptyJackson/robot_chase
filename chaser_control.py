@@ -10,7 +10,7 @@ from geometry_msgs.msg import PoseArray, Pose, Point
 
 OCC_GRID = get_occupancy_grid()
 NUM_CLOUD_POINTS = 25
-PUBLISH_PARTICLES = True  # Publish particles for RViz
+PUBLISH_PARTICLES = False  # Publish particles for RViz
 
 def in_line_of_sight(p1, p2):
   sample_rate = 10 # Samples per meter
@@ -127,6 +127,7 @@ def run(args):
     for c in ['c0', 'c1', 'c2']:
       chaser_positions = gts.poses[c][:2]
 
+    # Update estimated runner positions
     for r in ['r0', 'r1', 'r2']:
       r_pos = gts.poses[r][:2]
       visible = False
@@ -146,9 +147,11 @@ def run(args):
         else:
           runner_ests[r].update(chaser_positions)
 
-    # todo: Calculate paths
-    paths = nav_method(gts.poses)
+    # Calculate paths
+    allocations = {'c0':'r0', 'c1':'r1', 'c2':'r2'}
+    paths = nav_method(gts.poses, allocations)
 
+    # Publish chaser paths
     for path, publisher in zip(paths, publishers):
       path_msg = create_pose_array(path)
       publisher.publish(path_msg)
