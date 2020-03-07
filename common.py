@@ -86,6 +86,29 @@ def get_velocity(position, path_points):
   if np.linalg.norm(position - path_points[-1]) < .2:
     return v
 
+  # Estimate position along path
+  min_dist = np.inf
+  best_pt = -1
+  for i, pt in enumerate(path_points):
+    dist = np.linalg.norm(pt - position)
+    if dist:
+      min_dist = dist
+      best_pt = i
+
+  # Return velocity to next point
+  speed = 0.25
+  next_pt = min(best_pt, len(path_points)-1)
+  v = path_points[next_pt] - position
+  return v * speed / np.linalg.norm(v)
+
+def get_velocity_dep(position, path_points):
+  v = np.zeros_like(position)
+  if len(path_points) == 0:
+    return v
+  # Stop moving if the goal is reached.
+  if np.linalg.norm(position - path_points[-1]) < .2:
+    return v
+
   closestIndex = -1
   closest = 99999
 
