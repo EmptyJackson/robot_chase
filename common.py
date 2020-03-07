@@ -191,6 +191,7 @@ class OccupancyGrid(object):
 
 occ_grid = None
 def get_occupancy_grid():
+  global occ_grid
   if occ_grid != None:
     return occ_grid
 
