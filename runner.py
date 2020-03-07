@@ -89,6 +89,7 @@ def run(args):
       draw_solution(s, g)
       plt.show()
 
+
     v = get_velocity(pose[:2], path)
     u, w = feedback_linearized(pose, v, 0.1)
   

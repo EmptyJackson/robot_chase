@@ -44,7 +44,7 @@ RESOLUTION = 0.05
 FREE = 0
 OCCUPIED = 2
 
-SPEED = 1
+SPEED = 0.5
 CAPTURE_DIST = 0.25
 
 class MultiGroundtruthPose(object):
@@ -91,17 +91,18 @@ def get_velocity(position, path_points):
   best_pt = -1
   for i, pt in enumerate(path_points):
     dist = np.linalg.norm(pt - position)
-    if dist:
+    if dist < min_dist:
       min_dist = dist
       best_pt = i
 
   # Return velocity to next point
-  speed = 0.25
-  next_pt = min(best_pt, len(path_points)-1)
+  speed = 0.5
+  next_pt = min(best_pt+1, len(path_points)-1)
   v = path_points[next_pt] - position
+  print(path_points[next_pt], position, i)
   return v * speed / np.linalg.norm(v)
 
-def get_velocity_dep(position, path_points):
+def get_velocity_mikey(position, path_points):
   v = np.zeros_like(position)
   if len(path_points) == 0:
     return v
