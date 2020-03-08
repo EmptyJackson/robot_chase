@@ -3,4 +3,17 @@
 
 	<node pkg="robot_chase" type="runner.py" name="runner0" output="screen" args="--id=0"></node>
 
+	<node pkg="robot_chase" type="runner_control.py" name="runner_control0" output="screen" args="--id=0"></node>
+
+
+	<node pkg="robot_chase" type="runner.py" name="runner1" output="screen" args="--id=1"></node>
+
+	<node pkg="robot_chase" type="runner_control.py" name="runner_control1" output="screen" args="--id=1"></node>
+
+
+
+	<node pkg="robot_chase" type="runner.py" name="runner2" output="screen" args="--id=2"></node>
+
+	<node pkg="robot_chase" type="runner_control.py" name="runner_control2" output="screen" args="--id=2"></node>
+
 </launch>

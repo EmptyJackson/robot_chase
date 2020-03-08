@@ -21,61 +21,70 @@ from sensor_msgs.msg import LaserScan
 # For groundtruth information.
 from gazebo_msgs.msg import ModelStates
 from tf.transformations import euler_from_quaternion
-
-import matplotlib.pyplot as plt
 from geometry_msgs.msg import PoseArray, Pose, Point
 
+import matplotlib.pyplot as plt
 
 X = 0
 Y = 1
 YAW = 2
 
+def position_to_point(position):
+  p = Point()
+  p.x = position[X]
+  p.y = position[Y]
+  p.z = 0.
+  return p
 
-class PathSubscriber(object):
-  def __init__(self, name='c0'):
-    rospy.Subscriber('/'+name+'/path', PoseArray, self.callback)
-    self._path = None
-
-  def callback(self, msg):
-    self._path = np.array([[pose.position.x, pose.position.y] for pose in msg.poses])
-
-  @property
-  def ready(self):
-    return not self._path is None
-
-  @property
-  def path(self):
-    return self._path
+def create_pose_array(path):
+  pose_path = []
+  for position in path:
+    p = Pose()
+    p.position = position
+    pose_path.append(p)
+  path_msg = PoseArray(poses=pose_path)
+  return path_msg
 
 def run(args):
   runner_id = args.id
   rname = 'r' + str(runner_id)
-  rospy.init_node('runner' + str(runner_id))
+  rospy.init_node('runner_control' + str(runner_id))
+
+  runners = ['r0', 'r1', 'r2']
+  chasers = ['c0', 'c1', 'c2']
 
   # Update control every 10 ms.
   rate_limiter = rospy.Rate(100)
-  publisher = rospy.Publisher(rname + '/cmd_vel', Twist, queue_size=5)
+  publisher = rospy.Publisher(rname+'/path', PoseArray, queue_size=1)
   # Keep track of groundtruth position for plotting purposes.
-  groundtruth = MultiGroundtruthPose(names=([rname]))
+  groundtruth = MultiGroundtruthPose(names=(runners + chasers))
 
-  path_sub = PathSubscriber(rname)
+  occupancy_grid = get_occupancy_grid()
+
+  pf_targets = {}
+  for chaser in chasers:
+    pf_targets[chaser] = [np.array([0, 0], dtype=np.float32), 1., 1.]
   
+  potential_field = PotentialField(pf_targets)
+
+  print('Runner control initialised.')
   while not rospy.is_shutdown():
     # Make sure all measurements are ready.
-    if not groundtruth.ready or not path_sub.ready:
+    if not groundtruth.ready:
       rate_limiter.sleep()
       continue
 
+    for chaser in chasers:
+      potential_field.update_target(chaser, groundtruth.poses[chaser][:2])
+
     pose = groundtruth.poses[rname]
 
-    v = get_velocity(pose[:2], path_sub.path)
-    u, w = feedback_linearized(pose, v, 0.1)
-  
+    path, s, g = rrt_star_path(pose, np.array([6, 2]), occupancy_grid, potential_field, is_open=True)
 
-    vel_msg = Twist()
-    vel_msg.linear.x = u
-    vel_msg.angular.z = w
-    publisher.publish(vel_msg)
+    path_list = [position_to_point(node) for node in path]
+    path_msg = create_pose_array(path_list)
+    
+    publisher.publish(path_msg)
 
     rate_limiter.sleep()
     

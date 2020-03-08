@@ -28,9 +28,9 @@ ROBOT_RADIUS = 0.105 / 2.
 GOAL_POSITION = np.array([1.5, 1.5], dtype=np.float32)  # Any orientation is good.
 START_POSE = np.array([-1.5, -1.5, 0.], dtype=np.float32)
 
-MIN_ITERATIONS = 300
+MIN_ITERATIONS = 200
 MAX_ITERATIONS = 2000
-OPEN_ITERATIONS = 2000
+OPEN_ITERATIONS = 300
 
 
 def sample_random_position(occupancy_grid):
