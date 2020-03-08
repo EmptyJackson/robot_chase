@@ -11,7 +11,7 @@ from geometry_msgs.msg import PoseArray, Pose, Point
 
 OCC_GRID = get_occupancy_grid()
 NUM_CLOUD_POINTS = 25
-PUBLISH_PARTICLES = False  # Publish particles for RViz
+PUBLISH_PARTICLES = True  # Publish particles for RViz
 
 def in_line_of_sight(p1, p2):
   sample_rate = 10 # Samples per meter
@@ -214,7 +214,6 @@ def run(args):
         r_positions[r] = r_pos
 
     # Allocate chasers to runners
-    allocations = {'c0':'r0', 'c1':'r1', 'c2':'r2'}
     least_dist = np.inf
     for r in ['r0', 'r1', 'r2']:
       for c in ['c0', 'c1', 'c2']:
