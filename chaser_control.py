@@ -91,6 +91,20 @@ class ParticleCloud:
   def get_random_position(self):
     return random.sample(self._particles, 1)[0].position
 
+  def get_central_position(self):
+    mean_position = np.array([0., 0.], dtype=np.float32)
+    for particle in self._particles:
+      mean_position += particle.position
+    mean_position /= self._num_points
+    best_position = self._particles[0].position
+    best_dist = np.linalg.norm(mean_position - best_position)
+    for particle in self._particles[1:]:
+      dist = np.linalg.norm(mean_position - particle.position)
+      if best_dist > dist:
+        best_position = particle.position
+        best_dist = dist
+    return best_position
+  
 
 def position_to_point(position):
   p = Point()
@@ -110,8 +124,10 @@ def simple(poses, allocations, runner_ests):
 
 def rrt(poses, allocations, runner_ests):
   occupancy_grid = get_occupancy_grid()
+  potential_field = PotentialField({}, is_path=True)
   paths = {}
-  for c in ['c0', 'c1', 'c2']:
+  chasers = ['c0', 'c1', 'c2']
+  for c_id, c in enumerate(chasers):
     start_pose = poses[c]
     # Estimate or get goal position
     target_runner = allocations[c]
@@ -120,8 +136,16 @@ def rrt(poses, allocations, runner_ests):
     else:
       # Sample random position from point cloud
       goal_position = runner_ests[target_runner].get_random_position()
-    path, _, _ = rrt_star_path(start_pose, goal_position, occupancy_grid, PotentialField({}))
+
+      # Get potential field
+      targets = []
+      for other_c_id in range(c_id):
+        if allocations[chasers[other_c_id]] == target_runner:
+          targets.append(chasers[other_c_id])
+
+    path, _, _ = rrt_star_path(start_pose, goal_position, occupancy_grid, potential_field, targets=targets)
     paths[c] = []
+    potential_field.add_target(c, path)
     for point in path:
       paths[c].append(position_to_point(point))
   return paths
@@ -148,12 +172,13 @@ def run(args):
   gts = MultiGroundtruthPose(['c0', 'c1', 'c2', 'r0', 'r1', 'r2'])
   runner_ests = {'r0':None, 'r1':None, 'r2':None}
   last_seen = {'r0':None, 'r1':None, 'r2':None}
+  
+  potential_field = PotentialField(pf_targets)
 
   frame_id = 0
-
   print('Chaser controller initialized.')
   while not rospy.is_shutdown():
-    # Make sure all groundtruths are ready.
+    # Make sure all groundtruths are ready
     if not gts.ready:
       rate_limiter.sleep()
       continue
@@ -163,6 +188,7 @@ def run(args):
       chaser_positions.append(gts.poses[c][:2])
 
     # Update estimated runner positions
+    r_positions = {}
     for r in ['r0', 'r1', 'r2']:
       r_pos = gts.poses[r][:2]
       visible = False
@@ -183,9 +209,25 @@ def run(args):
               NUM_CLOUD_POINTS, CHASER_SPEED, chaser_positions, last_seen[r])
         else:
           runner_ests[r].update(chaser_positions)
+        r_positions[r] = runner_ests[r].get_central_position()
+      else:
+        r_positions[r] = r_pos
 
-    # Calculate paths
+    # Allocate chasers to runners
     allocations = {'c0':'r0', 'c1':'r1', 'c2':'r2'}
+    least_dist = np.inf
+    for r in ['r0', 'r1', 'r2']:
+      for c in ['c0', 'c1', 'c2']:
+        dist = np.linalg.norm(gts.poses[c][:2] - gts.poses[r][:2])
+        if dist < least_dist:
+          least_dist = dist
+          target_runner = r
+
+    allocations = {}
+    for c in ['c0', 'c1', 'c2']:
+      allocations[c] = target_runner
+
+    # Calculate chaser paths
     paths = nav_method(gts.poses, allocations, runner_ests)
 
     # Publish chaser paths
