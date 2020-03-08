@@ -345,7 +345,7 @@ class Node(object):
     self._cost = c
 
 
-  def update_parent(self, new_parent, new_local_cost, occupancy_grid, potential_field):
+  def update_parent(self, new_parent, new_local_cost, occupancy_grid, potential_field, targets=None):
     if self.neighbors:
       return
     if self.killed:
@@ -358,7 +358,7 @@ class Node(object):
     self.cost = self.parent.cost + new_local_cost
     self.local_cost = new_local_cost
 
-    self.pf_local = potential_field.sample(self.pose[:2])
+    self.pf_local = potential_field.sample(self.pose[:2], targets)
     self.pf_sum = self.parent.pf_sum + self.pf_local
 
     try:
@@ -403,7 +403,7 @@ class Node(object):
     return 1 + self.parent.steps()
 
 
-def rrt_star(start_pose, goal_position, occupancy_grid, potential_field, is_open=False):  
+def rrt_star(start_pose, goal_position, occupancy_grid, potential_field, is_open=False, targets=None):  
   # RRT builds a graph one node at a time.
   graph = []
   start_node = Node(start_pose)
@@ -470,9 +470,9 @@ def rrt_star(start_pose, goal_position, occupancy_grid, potential_field, is_open
       beta, arc_length = find_angle_with_obstacles(v.pose[:2], node.pose[:2], v.pose[2], occupancy_grid)
       if not beta is None:
         if arc_length < node.local_cost:
-          node.update_parent(v, arc_length, occupancy_grid, potential_field)
+          node.update_parent(v, arc_length, occupancy_grid, potential_field, targets)
 
-    v.pf_local = potential_field.sample(v.position)
+    v.pf_local = potential_field.sample(v.position, targets)
     v.pf_sum = v.pf_local + u.pf_sum
 
     for node in graph[:]:
@@ -504,8 +504,8 @@ def rrt_star(start_pose, goal_position, occupancy_grid, potential_field, is_open
     return start_node, final_node
 
 
-def rrt_star_path(start_pose, goal_position, occupancy_grid, potential_field, is_open=False):
-  start_node, final_node = rrt_star(start_pose, goal_position, occupancy_grid, potential_field, is_open)
+def rrt_star_path(start_pose, goal_position, occupancy_grid, potential_field, is_open=False, targets=None):
+  start_node, final_node = rrt_star(start_pose, goal_position, occupancy_grid, potential_field, is_open, targets)
 
   if final_node is None:
     return [], start_node, final_node
@@ -517,7 +517,19 @@ def rrt_star_path(start_pose, goal_position, occupancy_grid, potential_field, is
     path_nodes_rev.append(current_node.parent)
     current_node = current_node.parent
 
-  return list(reversed([node.position for node in path_nodes_rev])), start_node, final_node
+  path = list(reversed([node.position for node in path_nodes_rev]))
+
+  path_extended = []
+  for i, node in enumerate(path):
+    path_extended.append(path[i])
+
+    if i != len(path)-1:
+      next_node = path[i+1]
+
+      mid_node = (node + next_node) / 2.
+      path_extended.append(mid_node)
+
+  return path_extended, start_node, final_node
   
 
 def find_circle(node_a, node_b):
