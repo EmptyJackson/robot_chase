@@ -23,7 +23,7 @@ from gazebo_msgs.msg import ModelStates
 from tf.transformations import euler_from_quaternion
 
 import matplotlib.pyplot as plt
-from geometry_msgs.msg import PoseArray, Pose, Point
+from geometry_msgs.msg import PoseArray, Pose, Point, PointStamped
 
 
 X = 0
@@ -55,11 +55,14 @@ def run(args):
   # Update control every 10 ms.
   rate_limiter = rospy.Rate(100)
   publisher = rospy.Publisher(rname + '/cmd_vel', Twist, queue_size=5)
+  if RVIZ_PUBLISH:
+    rviz_publisher = rospy.Publisher('/' + rname + '_position', PointStamped, queue_size=1)
+
   # Keep track of groundtruth position for plotting purposes.
   groundtruth = MultiGroundtruthPose(names=([rname]))
 
   path_sub = PathSubscriber(rname)
-  
+  frame_id = 0
   while not rospy.is_shutdown():
     # Make sure all measurements are ready.
     if not groundtruth.ready or not path_sub.ready:
@@ -70,15 +73,25 @@ def run(args):
 
     v = get_velocity(pose[:2], path_sub.path)
     u, w = feedback_linearized(pose, v, 0.1)
-  
 
     vel_msg = Twist()
     vel_msg.linear.x = u
     vel_msg.angular.z = w
     publisher.publish(vel_msg)
+    if RVIZ_PUBLISH:
+      position_msg = PointStamped()
+      position_msg.header.seq = frame_id
+      position_msg.header.stamp = rospy.Time.now()
+      position_msg.header.frame_id = '/odom'
+      pt = Point()
+      pt.x = pose[X]
+      pt.y = pose[Y]
+      pt.z = .05
+      position_msg.point = pt
+      rviz_publisher.publish(position_msg)
 
     rate_limiter.sleep()
-    
+    frame_id += 1
 
 
 if __name__ == '__main__':

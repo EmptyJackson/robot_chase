@@ -157,10 +157,12 @@ def rrt(poses, allocations, runner_ests):
 
     path, s, g = rrt_star_path(start_pose, goal_position, occupancy_grid, potential_field, targets=targets)
 
+    """
     fig, ax = plt.subplots()
     occupancy_grid.draw()
     draw_solution(s, g)
     plt.show()
+    """
 
     path_tail = path[-min(len(path), path_tail_max):]
     potential_field.add_target(c, [path_tail, 1., 1.])
@@ -270,7 +272,7 @@ def run(args):
       intensity_channel = ChannelFloat32()
       intensity_channel.name = 'intensity'
       particle_msg.channels.append(intensity_channel)
-      for r_est in runner_ests.values():
+      for r, r_est in runner_ests.items():
         if not r_est is None:
           for p in r_est.get_positions():
             pt = Point()
@@ -278,7 +280,7 @@ def run(args):
             pt.y = p[Y]
             pt.z = .05
             particle_msg.points.append(pt)
-            intensity_channel.values.append(1)
+            intensity_channel.values.append(int(r[1]))
       runner_est_publisher.publish(particle_msg)
 
       for c in CHASERS:
