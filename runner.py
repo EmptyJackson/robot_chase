@@ -20,6 +20,7 @@ from geometry_msgs.msg import Twist
 from sensor_msgs.msg import LaserScan
 # For groundtruth information.
 from gazebo_msgs.msg import ModelStates
+from std_msgs.msg import String
 from tf.transformations import euler_from_quaternion
 
 import matplotlib.pyplot as plt
@@ -55,11 +56,12 @@ def run(args):
   # Update control every 10 ms.
   rate_limiter = rospy.Rate(100)
   publisher = rospy.Publisher(rname + '/cmd_vel', Twist, queue_size=5)
+  capture_publisher = rospy.Publisher('/captured_runners', String, queue_size=1)
   if RVIZ_PUBLISH:
     rviz_publisher = rospy.Publisher('/' + rname + '_position', PointStamped, queue_size=1)
 
   # Keep track of groundtruth position for plotting purposes.
-  groundtruth = MultiGroundtruthPose(names=([rname]))
+  groundtruth = MultiGroundtruthPose(names=(['c0', 'c1', 'c2', rname]))
 
   path_sub = PathSubscriber(rname)
   frame_id = 0
@@ -70,6 +72,14 @@ def run(args):
       continue
 
     pose = groundtruth.poses[rname]
+
+    for c in ['c0', 'c1', 'c2']:
+      if np.linalg.norm(groundtruth.poses[c][:2] - pose[:2]) < CAPTURE_DIST:
+        print('Runner ', rname, ' captured by chaser ', c)
+        s = String()
+        s.data = rname
+        capture_publisher.publish(s)
+        return
 
     v = get_velocity(pose[:2], path_sub.path)
     u, w = feedback_linearized(pose, v, 0.1)

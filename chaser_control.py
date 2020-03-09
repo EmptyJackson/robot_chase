@@ -8,6 +8,7 @@ from rrt_improved import *
 
 import nav_msgs.msg as ros_nav
 from nav_msgs.msg import Path
+from std_msgs.msg import String
 from sensor_msgs.msg import PointCloud, ChannelFloat32
 from geometry_msgs.msg import PoseArray, Pose, Point, PoseStamped
 
@@ -180,12 +181,16 @@ def create_pose_array(path):
   path_msg = PoseArray(poses=pose_path)
   return path_msg
 
+def capture_runner(r_name_msg):
+  RUNNERS.remove(r_name_msg.data)
+
 def run(args):
   rospy.init_node('chaser_control')
   nav_method = globals()[args.mode]
 
   # Update paths every 100 ms.
   rate_limiter = rospy.Rate(10)
+  rospy.Subscriber('/captured_runners', String, capture_runner)
   publishers = {'c'+str(i): rospy.Publisher('/c'+str(i)+'/path', PoseArray, queue_size=1) for i in range(3)}
   if RVIZ_PUBLISH:
     runner_est_publisher = rospy.Publisher('/runner_particles', PointCloud, queue_size=1)
@@ -272,7 +277,8 @@ def run(args):
       intensity_channel = ChannelFloat32()
       intensity_channel.name = 'intensity'
       particle_msg.channels.append(intensity_channel)
-      for r, r_est in runner_ests.items():
+      for r in RUNNERS:
+        r_est = runner_ests[r]
         if not r_est is None:
           for p in r_est.get_positions():
             pt = Point()
