@@ -231,7 +231,7 @@ class SampleGrid(object):
     minTVal = 999999
     minT = None
     for tile in self.possible_sampling_tiles:
-      ntiles = len(self.tiles[tile[0]][tiles[1]])
+      ntiles = len(self.grid[tile[0]][tile[1]])
       if ntiles > h:
         h = ntiles
 
@@ -239,11 +239,11 @@ class SampleGrid(object):
         minTVal = ntiles
         minT = tile
 
-    h = h // 2
+    h = h // 4
 
     ts = [minT]
     for tile in self.possible_sampling_tiles:
-      ntiles = len(self.tiles[tile[0]][tiles[1]])
+      ntiles = len(self.grid[tile[0]][tile[1]])
       if ntiles < h:
         ts.append(tile)
 
@@ -251,7 +251,7 @@ class SampleGrid(object):
 
   def rpoint(self, start=None, goal=None, sigma=None):
     if start is None or np.random.random() < 0.5:
-      sampling_tiles = self.possible_sampling_tiles
+      sampling_tiles = self.get_tiles_to_sample()
       
       ti = np.random.randint(len(sampling_tiles))
       tile = sampling_tiles[ti]
@@ -265,7 +265,6 @@ class SampleGrid(object):
       position = self.sample_line_gauss(start, goal, sigma)
       while not self.is_point_in_possible_tile(position):
         position = self.sample_line_gauss(start, goal, sigma)
-
 
       return position
       
@@ -287,10 +286,6 @@ class SampleGrid(object):
       position = self.rclose_point(p)
 
     return position
-
-  def print_densities(self):
-    for x in range(len(self.tiles)):
-      pass
 
     
 # Defines an occupancy grid.
