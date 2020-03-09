@@ -168,12 +168,13 @@ class OccupancyGrid(object):
     self._values = values.copy()
     # Inflate obstacles (using a convolution).
     inflated_grid = np.zeros_like(values)
-    inflated_grid[values == OCCUPIED] = border
-    w = 2 * int(ROBOT_RADIUS / resolution) + 1
+    inflated_grid[values == OCCUPIED] = 1.
+    w = 2 * int(ROBOT_RADIUS / resolution) + 2 * border
     inflated_grid = scipy.signal.convolve2d(inflated_grid, np.ones((w, w)), mode='same')
     self._values[inflated_grid > 0.] = OCCUPIED
-    self._origin = np.array(origin[:2], dtype=np.float32) - border
+    self._origin = np.array(origin[:2], dtype=np.float32)
     self._origin -= resolution / 2.
+    self._origin -= border
     assert origin[YAW] == 0.
     self._resolution = resolution
 
