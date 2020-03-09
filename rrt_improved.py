@@ -8,7 +8,6 @@ import matplotlib.patches as patches
 import numpy as np
 import os
 import re
-import scipy.stats
 import scipy.signal
 import yaml
 import math
@@ -202,7 +201,10 @@ class SampleGrid(object):
 
   def is_point_in_possible_tile(self, position):
     index = self.world_to_grid(position)
-    return index in self.possible_sampling_tiles
+    for t in self.possible_sampling_tiles:
+      if (t == index).all():
+        return True
+    return False
 
   def get_close_nodes(self, position):
     nodes = []
@@ -223,10 +225,11 @@ class SampleGrid(object):
     r = np.random.random()
     line_point = r * p1 + (1 - r) * p2
 
-    diff = np.linalg.norm(p2 - p1)
+    diff = (p2-p1) / np.linalg.norm(p2 - p1)
     perp = np.array([diff[1], -diff[0]], dtype=np.float32)
-
-    sample_point = line_point + perp * scipy.stats.norm.pdf(0, sigma)
+    
+    p = perp * np.random.normal(0, sigma * np.linalg.norm(p2 - p1))
+    return line_point + p
 
   def rpoint(self, start=None, goal=None, sigma=None):
     if start is None or np.random.random() < 0.5:
@@ -239,9 +242,10 @@ class SampleGrid(object):
       return position
 
     else:
-      position = sample_line_gauss(start, goal, sigma)
-      while not is_point_in_possible_tile(position):
-        position = sample_line_gauss(start, goal, sigma)
+      position = self.sample_line_gauss(start, goal, sigma)
+      while not self.is_point_in_possible_tile(position):
+        position = self.sample_line_gauss(start, goal, sigma)
+
 
       return position
       
@@ -250,6 +254,17 @@ class SampleGrid(object):
     position = self.rpoint(start, goal, sigma)
     while not occupancy_grid.is_free(position):
       position = self.rpoint(start, goal, sigma)
+
+    return position
+
+  def rclose_point(self, p):
+    ra = [(np.random.random() * 2. - 1.) * 2 for _ in range(2)]
+    return p + ra
+  
+  def sample_random_close_point(self, p, occupancy_grid):
+    position = self.rclose_point(p)
+    while not occupancy_grid.is_free(position):
+      position = self.rclose_point(p)
 
     return position
 
@@ -452,10 +467,13 @@ def rrt_star(start_pose, goal_position, occupancy_grid, potential_field, is_open
     if i % 100 == 0:
       print(i)
 
-    if is_open:
-      position = sample_grid.sample_random_point(occupancy_grid, start_node.position, goal_position, 1)
+    if i < 50:
+      position = sample_grid.sample_random_close_point(start_node.position, occupancy_grid)
     else:
-      position = sample_grid.sample_random_point(occupancy_grid)
+      if not is_open:
+        position = sample_grid.sample_random_point(occupancy_grid, start_node.position, goal_position, 0.2)
+      else:
+        position = sample_grid.sample_random_point(occupancy_grid)
     # With a random chance, draw the goal position.
     if (np.random.rand() < .05 or i == 0) and not is_open:
       position = goal_position
@@ -470,7 +488,10 @@ def rrt_star(start_pose, goal_position, occupancy_grid, potential_field, is_open
       if d < .2:
         break
       if d > .2 and d < MAX_DISTANCE_BETWEEN_NODES and n.direction.dot(position - n.position) / d > 0.70710678118:
-        beta, arc_length = find_angle_with_obstacles(n.pose[:2], position, n.pose[2], occupancy_grid)
+        try:
+          beta, arc_length = find_angle_with_obstacles(n.pose[:2], position, n.pose[2], occupancy_grid)
+        except:
+          continue
 
         if not beta is None:
           cost = arc_length + n.cost
@@ -491,7 +512,10 @@ def rrt_star(start_pose, goal_position, occupancy_grid, potential_field, is_open
     v.parent = u
     
     for node in sample_grid.get_close_nodes(v.pose[:2]):
-      beta, arc_length = find_angle_with_obstacles(v.pose[:2], node.pose[:2], v.pose[2], occupancy_grid)
+      try:
+        beta, arc_length = find_angle_with_obstacles(v.pose[:2], node.pose[:2], v.pose[2], occupancy_grid)
+      except:
+        continue
       if not beta is None:
         if arc_length < node.local_cost:
           node.update_parent(v, arc_length, occupancy_grid, potential_field, targets)
@@ -553,7 +577,7 @@ def rrt_star_path(start_pose, goal_position, occupancy_grid, potential_field, is
       mid_node = (node + next_node) / 2.
       path_extended.append(mid_node)
 
-  return path_extended, start_node, final_node
+  return path, start_node, final_node
   
 
 def find_circle(node_a, node_b):

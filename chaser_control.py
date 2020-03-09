@@ -154,7 +154,13 @@ def rrt(poses, allocations, runner_ests):
       if allocations[chasers[other_c_id]] == target_runner:
         targets.append(chasers[other_c_id])
 
-    path, _, _ = rrt_star_path(start_pose, goal_position, occupancy_grid, potential_field, targets=targets)
+    path, s, g = rrt_star_path(start_pose, goal_position, occupancy_grid, potential_field, targets=targets)
+
+    fig, ax = plt.subplots()
+    occupancy_grid.draw()
+    draw_solution(s, g)
+    plt.show()
+      
     paths[c] = []
     potential_field.add_target(c, path)
     for point in path:
