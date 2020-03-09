@@ -15,7 +15,7 @@ import random
 import math
 
 from std_msgs.msg import Header
-from geometry_msgs.msg import Twist, Pose
+from geometry_msgs.msg import Twist, Pose, Point
 from sensor_msgs.msg import LaserScan
 import nav_msgs.msg as ros_nav
 from nav_msgs.msg import MapMetaData
