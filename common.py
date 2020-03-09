@@ -48,7 +48,7 @@ OCCUPIED = 2
 
 CHASER_SPEED = 0.5
 RUNNER_SPEED = 0.5
-SPEED = 0.5
+SPEED = 0.5 / 5
 CAPTURE_DIST = 0.25
 
 class MultiGroundtruthPose(object):
@@ -100,7 +100,7 @@ def get_velocity(position, path_points):
       best_pt = i
 
   # Return velocity to next point
-  speed = 0.5
+  speed = 0.1
   next_pt = min(best_pt+1, len(path_points)-1)
   v = path_points[next_pt] - position
   return v * speed / np.linalg.norm(v)

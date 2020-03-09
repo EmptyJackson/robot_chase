@@ -8,6 +8,7 @@ import matplotlib.patches as patches
 import numpy as np
 import os
 import re
+import scipy.stats
 import scipy.signal
 import yaml
 import math
@@ -199,6 +200,10 @@ class SampleGrid(object):
   def in_bounds(self, x, y):
     return x >= 0 and x < self.grid_size[0] and y >= 0 and y < self.grid_size[1]
 
+  def is_point_in_possible_tile(self, position):
+    index = self.world_to_grid(position)
+    return index in self.possible_sampling_tiles
+
   def get_close_nodes(self, position):
     nodes = []
     index = self.world_to_grid(position)
@@ -214,21 +219,37 @@ class SampleGrid(object):
 
     return nodes
 
-  def rpoint(self):
-    ti = np.random.randint(len(self.possible_sampling_tiles))
-    tile = self.possible_sampling_tiles[ti]
-    #print(tile)
+  def sample_line_gauss(self, p1, p2, sigma):
+    r = np.random.random()
+    line_point = r * p1 + (1 - r) * p2
 
-    base_position = self.grid_to_world(tile)
+    diff = np.linalg.norm(p2 - p1)
+    perp = np.array([diff[1], -diff[0]], dtype=np.float32)
 
-    position = np.array(base_position, dtype=np.float32) + (np.random.random(2) * self.tile_size)
-    #print(tile, base_position, position)
-    return position
+    sample_point = line_point + perp * scipy.stats.norm.pdf(0, sigma)
 
-  def sample_random_point(self, occupancy_grid):
-    position = self.rpoint()
+  def rpoint(self, start=None, goal=None, sigma=None):
+    if start is None or np.random.random() < 0.5:
+      ti = np.random.randint(len(self.possible_sampling_tiles))
+      tile = self.possible_sampling_tiles[ti]
+
+      base_position = self.grid_to_world(tile)
+
+      position = np.array(base_position, dtype=np.float32) + (np.random.random(2) * self.tile_size)
+      return position
+
+    else:
+      position = sample_line_gauss(start, goal, sigma)
+      while not is_point_in_possible_tile(position):
+        position = sample_line_gauss(start, goal, sigma)
+
+      return position
+      
+
+  def sample_random_point(self, occupancy_grid, start=None, goal=None, sigma=None):
+    position = self.rpoint(start, goal, sigma)
     while not occupancy_grid.is_free(position):
-      position = self.rpoint()
+      position = self.rpoint(start, goal, sigma)
 
     return position
 
@@ -430,8 +451,11 @@ def rrt_star(start_pose, goal_position, occupancy_grid, potential_field, is_open
   for i in range(OPEN_ITERATIONS if is_open else MAX_ITERATIONS):
     if i % 100 == 0:
       print(i)
-    
-    position = sample_grid.sample_random_point(occupancy_grid)
+
+    if is_open:
+      position = sample_grid.sample_random_point(occupancy_grid, start_node.position, goal_position, 1)
+    else:
+      position = sample_grid.sample_random_point(occupancy_grid)
     # With a random chance, draw the goal position.
     if np.random.rand() < .05 and not is_open:
       position = goal_position
