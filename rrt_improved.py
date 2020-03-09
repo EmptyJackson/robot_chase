@@ -180,7 +180,6 @@ class SampleGrid(object):
       raise
     
     if len(self.grid[index[0]][index[1]]) == 1:
-      print('new', index)
       for lx in [-1, 0, 1]:
         for ly in [-1, 0, 1]:
           x = index[0] + lx
