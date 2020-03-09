@@ -161,10 +161,6 @@ class SampleGrid(object):
 
     self.possible_sampling_tiles = []
 
-    w = self.grid_to_world([11, 5])
-    
-    print(self.world_to_grid(w), w)
-
   def world_to_grid(self, position):
     pos = position - self.world_origin
     indexes = np.floor(pos / self.tile_size)
@@ -231,10 +227,35 @@ class SampleGrid(object):
     p = perp * np.random.normal(0, sigma * np.linalg.norm(p2 - p1))
     return line_point + p
 
+  def get_tiles_to_sample(self):
+    h = -1
+    minTVal = 999999
+    minT = None
+    for tile in self.possible_sampling_tiles:
+      ntiles = len(self.tiles[tile[0]][tiles[1]])
+      if ntiles > h:
+        h = ntiles
+
+      if ntiles < minTVal:
+        minTVal = ntiles
+        minT = tile
+
+    h = h // 2
+
+    ts = [minT]
+    for tile in self.possible_sampling_tiles:
+      ntiles = len(self.tiles[tile[0]][tiles[1]])
+      if ntiles < h:
+        ts.append(tile)
+
+    return ts
+
   def rpoint(self, start=None, goal=None, sigma=None):
     if start is None or np.random.random() < 0.5:
-      ti = np.random.randint(len(self.possible_sampling_tiles))
-      tile = self.possible_sampling_tiles[ti]
+      sampling_tiles = self.possible_sampling_tiles
+      
+      ti = np.random.randint(len(sampling_tiles))
+      tile = sampling_tiles[ti]
 
       base_position = self.grid_to_world(tile)
 
@@ -268,6 +289,11 @@ class SampleGrid(object):
 
     return position
 
+  def print_densities(self):
+    for x in range(len(self.tiles)):
+      pass
+
+    
 # Defines an occupancy grid.
 class OccupancyGrid(object):
   def __init__(self, values, origin, resolution):
@@ -326,9 +352,7 @@ class OccupancyGrid(object):
 
 # Defines a node of the graph.
 class Node(object):
-  
   nIndex = 0
-
   
   def __init__(self, pose):
     self._pose = pose.copy()
@@ -490,7 +514,8 @@ def rrt_star(start_pose, goal_position, occupancy_grid, potential_field, is_open
       if d > .2 and d < MAX_DISTANCE_BETWEEN_NODES and n.direction.dot(position - n.position) / d > 0.70710678118:
         try:
           beta, arc_length = find_angle_with_obstacles(n.pose[:2], position, n.pose[2], occupancy_grid)
-        except:
+        except Exception as e:
+          print('AAAAAA', e)
           continue
 
         if not beta is None:
@@ -514,7 +539,8 @@ def rrt_star(start_pose, goal_position, occupancy_grid, potential_field, is_open
     for node in sample_grid.get_close_nodes(v.pose[:2]):
       try:
         beta, arc_length = find_angle_with_obstacles(v.pose[:2], node.pose[:2], v.pose[2], occupancy_grid)
-      except:
+      except Exception as e:
+        print('AAAAAA', e)
         continue
       if not beta is None:
         if arc_length < node.local_cost:
