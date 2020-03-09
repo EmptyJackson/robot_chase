@@ -50,6 +50,13 @@ RUNNER_SPEED = 0.5
 SPEED = 0.5 / 5
 CAPTURE_DIST = 0.25
 
+def position_to_point(position):
+  p = Point()
+  p.x = position[X]
+  p.y = position[Y]
+  p.z = 0.
+  return p
+
 class MultiGroundtruthPose(object):
   def __init__(self, names=['c0', 'c1', 'c2', 'r0', 'r1', 'r2']):
     rospy.Subscriber('/gazebo/model_states', ModelStates, self.callback)

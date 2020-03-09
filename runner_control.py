@@ -21,7 +21,8 @@ from sensor_msgs.msg import LaserScan
 # For groundtruth information.
 from gazebo_msgs.msg import ModelStates
 from tf.transformations import euler_from_quaternion
-from geometry_msgs.msg import PoseArray, Pose, Point
+from geometry_msgs.msg import PoseArray, Pose, Point, PoseStamped
+from nav_msgs.msg import Path
 
 import matplotlib.pyplot as plt
 
@@ -56,6 +57,8 @@ def run(args):
   # Update control every 10 ms.
   rate_limiter = rospy.Rate(100)
   publisher = rospy.Publisher(rname+'/path', PoseArray, queue_size=1)
+  if RVIZ_PUBLISH:
+    rviz_publisher = rospy.Publisher('/'+rname+'_path', Path, queue_size=1)
   # Keep track of groundtruth position for plotting purposes.
   groundtruth = MultiGroundtruthPose(names=(runners + chasers))
 
@@ -67,6 +70,7 @@ def run(args):
   
   potential_field = PotentialField(pf_targets)
 
+  frame_id = 0
   print('Runner control initialised.')
   while not rospy.is_shutdown():
     # Make sure all measurements are ready.
@@ -86,7 +90,25 @@ def run(args):
     
     publisher.publish(path_msg)
 
+    if RVIZ_PUBLISH:
+      path_msg = Path()
+      path_msg.header.seq = frame_id
+      path_msg.header.stamp = rospy.Time.now()
+      path_msg.header.frame_id = '/odom'
+      for position in path:
+        pt = position_to_point(position)
+        ps = PoseStamped()
+        ps.header.seq = frame_id
+        ps.header.stamp = rospy.Time.now()
+        ps.header.frame_id = '/odom'
+        p = Pose()
+        p.position = pt
+        ps.pose = p
+        path_msg.poses.append(ps)
+      rviz_publisher.publish(path_msg)
+
     rate_limiter.sleep()
+    frame_id += 1
     
 
 

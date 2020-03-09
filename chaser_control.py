@@ -115,15 +115,7 @@ class ParticleCloud:
   @property
   def runner(self):
     return self._runner
-  
-  
 
-def position_to_point(position):
-  p = Point()
-  p.x = position[X]
-  p.y = position[Y]
-  p.z = 0.
-  return p
 
 def simple(poses, allocations, runner_ests):
   paths = {}
