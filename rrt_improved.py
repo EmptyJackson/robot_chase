@@ -457,7 +457,7 @@ def rrt_star(start_pose, goal_position, occupancy_grid, potential_field, is_open
     else:
       position = sample_grid.sample_random_point(occupancy_grid)
     # With a random chance, draw the goal position.
-    if np.random.rand() < .05 and not is_open:
+    if (np.random.rand() < .05 or i == 0) and not is_open:
       position = goal_position
     # Find closest node in graph.
     # In practice, one uses an efficient spatial structure (e.g., quadtree).
