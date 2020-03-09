@@ -36,7 +36,7 @@ CYLINDER_POSITIONS = np.array(
    [ 2., 2.],
    [-2.,-6.],
    [-6.,-2.]], dtype=np.float32)
-CYLINDER_RADIUS = 1. + ROBOT_RADIUS
+CYLINDER_RADIUS = 1. + ROBOT_RADIUS + 0.05
 WALL_WIDTH = ROBOT_RADIUS + 0.15 / 2.
 DOOR_BOUNDS = np.array([1.25, 2.75], dtype=np.float32)
 GRID_FREQ = 4.
