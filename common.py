@@ -14,12 +14,11 @@ import rospy
 import random
 import math
 
-# Robot motion commands:
-# http://docs.ros.org/api/geometry_msgs/html/msg/Twist.html
-from geometry_msgs.msg import Twist
-# Laser scan message:
-# http://docs.ros.org/api/sensor_msgs/html/msg/LaserScan.html
+from std_msgs.msg import Header
+from geometry_msgs.msg import Twist, Pose
 from sensor_msgs.msg import LaserScan
+import nav_msgs.msg as ros_nav
+from nav_msgs.msg import MapMetaData
 # For groundtruth information.
 from gazebo_msgs.msg import ModelStates
 from tf.transformations import euler_from_quaternion
@@ -164,15 +163,16 @@ def feedback_linearized(pose, velocity, epsilon):
 # Defines an occupancy grid.
 class OccupancyGrid(object):
   def __init__(self, values, origin, resolution):
+    border = 1
     self._original_values = values.copy()
     self._values = values.copy()
     # Inflate obstacles (using a convolution).
     inflated_grid = np.zeros_like(values)
-    inflated_grid[values == OCCUPIED] = 1.
+    inflated_grid[values == OCCUPIED] = border
     w = 2 * int(ROBOT_RADIUS / resolution) + 1
     inflated_grid = scipy.signal.convolve2d(inflated_grid, np.ones((w, w)), mode='same')
     self._values[inflated_grid > 0.] = OCCUPIED
-    self._origin = np.array(origin[:2], dtype=np.float32)
+    self._origin = np.array(origin[:2], dtype=np.float32) - border
     self._origin -= resolution / 2.
     assert origin[YAW] == 0.
     self._resolution = resolution
@@ -215,6 +215,34 @@ class OccupancyGrid(object):
 
   def is_free(self, position):
     return self._values[self.get_index(position)] == FREE
+
+  def get_ros_message(self):
+    header = Header()
+    header.seq = 0
+    header.stamp = rospy.Time.now()
+    header.frame_id = '/odom'
+
+    meta_data = MapMetaData()
+    meta_data.resolution = self._resolution
+    meta_data.width = self._values.shape[X]
+    meta_data.height = self._values.shape[Y]
+
+    p = Pose()
+    p.position.x = self._origin[X]
+    p.position.y = self._origin[Y]
+    p.position.z = 0.01
+    p.orientation.x = 0.
+    p.orientation.y = 0.
+    p.orientation.z = 0.
+    p.orientation.w = 1.    
+    meta_data.origin = p
+
+    grid_msg = ros_nav.OccupancyGrid(header=header, info=meta_data, data=[])
+    for row in self._values:
+      for v in row:
+        grid_msg.data.append(int(v * (100/OCCUPIED)))
+    return grid_msg
+
 
 occ_grid = None
 def get_occupancy_grid():

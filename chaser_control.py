@@ -6,6 +6,7 @@ import numpy as np
 from common import *
 from rrt_improved import *
 
+import nav_msgs.msg as ros_nav
 from nav_msgs.msg import Path
 from sensor_msgs.msg import PointCloud, ChannelFloat32
 from geometry_msgs.msg import PoseArray, Pose, Point, PoseStamped
@@ -181,6 +182,9 @@ def run(args):
     path_publishers = {}
     for c in CHASERS:
       path_publishers[c] = rospy.Publisher('/'+c+'_path', Path, queue_size=1)
+
+    map_publisher = rospy.Publisher('/map', ros_nav.OccupancyGrid, queue_size=1)
+    map_publisher.publish(OCC_GRID.get_ros_message())
 
   gts = MultiGroundtruthPose(CHASERS + RUNNERS)
   runner_ests = {'r0':None, 'r1':None, 'r2':None}
