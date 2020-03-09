@@ -134,7 +134,7 @@ def simple(poses, allocations, runner_ests):
   return paths
 
 def rrt(poses, allocations, runner_ests):
-  path_tail_max = 10
+  path_tail_max = 5
   occupancy_grid = get_occupancy_grid()
   potential_field = PotentialField({}, is_path=True)
   paths = {}
@@ -161,9 +161,9 @@ def rrt(poses, allocations, runner_ests):
     occupancy_grid.draw()
     draw_solution(s, g)
     plt.show()
-      
+
     path_tail = path[-min(len(path), path_tail_max):]
-    potential_field.add_target(c, path_tail)
+    potential_field.add_target(c, [path_tail, 1., 1.])
     paths[c] = []
     for point in path:
       paths[c].append(position_to_point(point))
