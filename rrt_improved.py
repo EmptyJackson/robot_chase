@@ -76,6 +76,24 @@ def adjust_pose(node, final_position, occupancy_grid):
   return final_node
 
 
+def find_midway_node(A, B, theta, occupancy_grid):
+  _, angle_add = find_angle_with_obstacles(A, B, theta, occupancy_grid)
+
+  beta, C, r, clockwise = find_angle(A, B, theta)
+
+  C_to_node = (A - C)
+  C_to_final = (B - C)
+
+  starting_angle = math.atan2(C_to_node[1], C_to_node[0])
+  
+  end_angle = math.atan2(C_to_final[1], C_to_final[0])
+
+  angle = (starting_angle + (angle_add / 2.) + np.pi * 2) % (np.pi * 2)
+  x = C[0] + r * np.cos(angle)
+  y = C[1] + r * np.sin(angle)
+
+  return np.array([x, y], dtype=np.float32)
+
 def find_angle_with_obstacles(A, B, theta, occupancy_grid):
   beta, C, r, clockwise = find_angle(A, B, theta)
 
@@ -90,7 +108,7 @@ def find_angle_with_obstacles(A, B, theta, occupancy_grid):
   if clockwise:
     direction = -1
 
-  da = (occupancy_grid.resolution / r) * direction
+  da = (occupancy_grid.resolution / r) * direction * 2.5
   angle_add = 0
   while abs((starting_angle + angle_add + 2 * np.pi * 2 - end_angle) % (np.pi * 2)) > abs(da * 2):
     angle = (starting_angle + angle_add + np.pi * 2) % (np.pi * 2)
@@ -250,8 +268,8 @@ class SampleGrid(object):
     return ts
 
   def rpoint(self, start=None, goal=None, sigma=None):
-    if start is None or np.random.random() < 0.5:
-      sampling_tiles = self.get_tiles_to_sample()
+    if start is None or np.random.random() < 0.2:
+      sampling_tiles = self.possible_sampling_tiles
       
       ti = np.random.randint(len(sampling_tiles))
       tile = sampling_tiles[ti]
@@ -409,11 +427,12 @@ class Node(object):
       self.parent.neighbors.remove(self)
     self.parent = new_parent
     self.parent.neighbors.append(self)
-    self.cost = self.parent.cost + new_local_cost
-    self.local_cost = new_local_cost
 
     self.pf_local = potential_field.sample(self.pose[:2], targets)
     self.pf_sum = self.parent.pf_sum + self.pf_local
+
+    self.cost = self.parent.cost + new_local_cost + self.pf_local
+    self.local_cost = new_local_cost
 
     try:
       self._pose = adjust_pose(self.parent, self.pose[:2], occupancy_grid).pose
@@ -514,6 +533,8 @@ def rrt_star(start_pose, goal_position, occupancy_grid, potential_field, is_open
 
         if not beta is None:
           cost = arc_length + n.cost
+          if not is_open:
+            cost += n.pf_sum
           if cost < lowest_cost:
             lowest_cost = cost
             u = n
@@ -537,7 +558,11 @@ def rrt_star(start_pose, goal_position, occupancy_grid, potential_field, is_open
         print('AAAAAA', e)
         continue
       if not beta is None:
-        if arc_length < node.local_cost:
+        if not is_open:
+          pfparent = node.parent.pf_sum if (not node.parent is None) else 0
+          if arc_length + v.pf_sum < node.local_cost + pfparent:
+            node.update_parent(v, arc_length, occupancy_grid, potential_field, targets)
+        elif is_open and arc_length < node.local_cost:
           node.update_parent(v, arc_length, occupancy_grid, potential_field, targets)
 
     v.pf_local = potential_field.sample(v.position, targets)
@@ -585,19 +610,19 @@ def rrt_star_path(start_pose, goal_position, occupancy_grid, potential_field, is
     path_nodes_rev.append(current_node.parent)
     current_node = current_node.parent
 
-  path = list(reversed([node.position for node in path_nodes_rev]))
+  path = list(reversed([node.pose for node in path_nodes_rev]))
 
   path_extended = []
   for i, node in enumerate(path):
-    path_extended.append(path[i])
+    path_extended.append(path[i][:2])
 
     if i != len(path)-1:
       next_node = path[i+1]
 
-      mid_node = (node + next_node) / 2.
-      path_extended.append(mid_node)
+      mid_pos = find_midway_node(node[:2], next_node[:2], node[2], occupancy_grid)
+      path_extended.append((node[:2] + next_node[:2]) / 2.)
 
-  return path, start_node, final_node
+  return path_extended, start_node, final_node
   
 
 def find_circle(node_a, node_b):
