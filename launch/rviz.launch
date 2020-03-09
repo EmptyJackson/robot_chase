@@ -5,7 +5,7 @@
   -->
   <arg name="open_rviz_config" default="true"/>
   <group if="$(arg open_rviz_config)">
-    <node name="rviz" pkg="rviz" type="rviz" args="-d $(find turtlebot3_gazebo)/rviz/turtlebot3_gazebo_model.rviz"/>
+    <node name="rviz" pkg="rviz" type="rviz" args="-d $(find robot_chase)/rviz/config.rviz"/>
   </group>
   
 </launch>
