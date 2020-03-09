@@ -305,6 +305,8 @@ class PotentialField:
         for path_point in target[0]:
           weight += scipy.stats.norm.pdf(
             np.linalg.norm(position - path_point), 0, target[1]) * target[2]
+        if len(target) < 5:
+          weight *= 5. / len(target)
       else:
         weight += scipy.stats.norm.pdf(
           np.linalg.norm(position - target[0]), 0, target[1]) * target[2]
