@@ -163,9 +163,13 @@ def feedback_linearized(pose, velocity, epsilon):
 # Defines an occupancy grid.
 class OccupancyGrid(object):
   def __init__(self, values, origin, resolution):
-    border = .5
-    border_cells = int(border / resolution)
-    values = np.pad(values, border_cells, mode='constant', constant_values=OCCUPIED)
+    # Add border
+    for i in range(values.shape[0]):
+      for j in [0, 1, -2, -1]:
+        values[i][j] = values[i][j] = OCCUPIED
+    for j in range(values.shape[1]):
+      for i in [0, 1, -2, -1]:
+        values[i][j] = values[i][j] = OCCUPIED
     self._original_values = values.copy()
     self._values = values.copy()
     # Inflate obstacles (using a convolution).
@@ -176,7 +180,6 @@ class OccupancyGrid(object):
     self._values[inflated_grid > 0.] = OCCUPIED
     self._origin = np.array(origin[:2], dtype=np.float32)
     self._origin -= resolution / 2.
-    self._origin -= border
     assert origin[YAW] == 0.
     self._resolution = resolution
 
@@ -253,7 +256,7 @@ def get_occupancy_grid():
   if occ_grid != None:
     return occ_grid
 
-  dim = int(2 * ARENA_OFFSET / RESOLUTION) + 10 # Add border
+  dim = int(2 * ARENA_OFFSET / RESOLUTION)
   grid = np.zeros((dim, dim), dtype=np.int8)
 
   for x in range(dim):
