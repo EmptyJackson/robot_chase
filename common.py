@@ -163,13 +163,15 @@ def feedback_linearized(pose, velocity, epsilon):
 # Defines an occupancy grid.
 class OccupancyGrid(object):
   def __init__(self, values, origin, resolution):
-    border = 1
+    border = .5
+    border_cells = int(border / resolution)
+    values = np.pad(values, border_cells, mode='constant', constant_values=OCCUPIED)
     self._original_values = values.copy()
     self._values = values.copy()
     # Inflate obstacles (using a convolution).
     inflated_grid = np.zeros_like(values)
     inflated_grid[values == OCCUPIED] = 1.
-    w = 2 * int(ROBOT_RADIUS / resolution) + 2 * border
+    w = 2 * int(ROBOT_RADIUS / resolution)
     inflated_grid = scipy.signal.convolve2d(inflated_grid, np.ones((w, w)), mode='same')
     self._values[inflated_grid > 0.] = OCCUPIED
     self._origin = np.array(origin[:2], dtype=np.float32)
