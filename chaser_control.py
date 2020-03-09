@@ -6,12 +6,15 @@ import numpy as np
 from common import *
 from rrt_improved import *
 
-from sensor_msgs.msg import PointCloud
-from geometry_msgs.msg import PoseArray, Pose, Point
+from nav_msgs.msg import Path
+from sensor_msgs.msg import PointCloud, ChannelFloat32
+from geometry_msgs.msg import PoseArray, Pose, Point, PoseStamped
 
 OCC_GRID = get_occupancy_grid()
 NUM_CLOUD_POINTS = 25
-PUBLISH_PARTICLES = True  # Publish particles for RViz
+
+CHASERS = ['c0', 'c1', 'c2']
+RUNNERS = ['r0', 'r1', 'r2']
 
 def in_line_of_sight(p1, p2):
   sample_rate = 10 # Samples per meter
@@ -41,10 +44,11 @@ class Particle:
         return False
     return True
 
-  def step(self):
+  def step(self, chasers):
     d = np.random.uniform(-1., 1., 2)
     speed = np.random.uniform(0., self._max_speed)
-    return speed * d / np.linalg.norm(d)
+    self._position += speed * d / np.linalg.norm(d)
+    return self.is_valid(chasers)
 
   @property
   def position(self):
@@ -52,7 +56,8 @@ class Particle:
   
 
 class ParticleCloud:
-  def __init__(self, num_points, max_speed, chasers, start_pos=None):
+  def __init__(self, num_points, max_speed, chasers, runner, start_pos=None):
+    self._runner = runner
     self._num_points = num_points
     self._max_speed = max_speed
     if start_pos is None:
@@ -70,19 +75,20 @@ class ParticleCloud:
   def update(self, chasers):
     invalid_ps = set()
     for particle in self._particles:
-      invalid = particle.step(chasers)
+      invalid = not particle.step(chasers)
       if invalid:
         invalid_ps.add(particle)
 
     n_invalid = len(invalid_ps)
     if n_invalid == self._num_points:
       # Reset cloud when all particles invalidated
-      self.reset()
+      self.reset(chasers)
+      print('Runner ' + self._runner + ' was lost by chasers.')
     else:
-      self._particles.remove(invalid_ps)
+      self._particles -= invalid_ps
       for _ in range(n_invalid):
-        pos = random.sample(self._particles, 1)[0].position
-        self._particles.add(particle(self._max_speed, chasers, pos))
+        pos = np.copy(random.sample(self._particles, 1)[0].position)
+        self._particles.add(Particle(self._max_speed, chasers, pos))
 
   def get_positions(self):
     for particle in self._particles:
@@ -96,14 +102,18 @@ class ParticleCloud:
     for particle in self._particles:
       mean_position += particle.position
     mean_position /= self._num_points
-    best_position = self._particles[0].position
-    best_dist = np.linalg.norm(mean_position - best_position)
-    for particle in self._particles[1:]:
+    best_dist = np.inf
+    for particle in self._particles:
       dist = np.linalg.norm(mean_position - particle.position)
       if best_dist > dist:
         best_position = particle.position
         best_dist = dist
     return best_position
+
+  @property
+  def runner(self):
+    return self._runner
+  
   
 
 def position_to_point(position):
@@ -137,11 +147,11 @@ def rrt(poses, allocations, runner_ests):
       # Sample random position from point cloud
       goal_position = runner_ests[target_runner].get_random_position()
 
-      # Get potential field
-      targets = []
-      for other_c_id in range(c_id):
-        if allocations[chasers[other_c_id]] == target_runner:
-          targets.append(chasers[other_c_id])
+    # Get potential field
+    targets = []
+    for other_c_id in range(c_id):
+      if allocations[chasers[other_c_id]] == target_runner:
+        targets.append(chasers[other_c_id])
 
     path, _, _ = rrt_star_path(start_pose, goal_position, occupancy_grid, potential_field, targets=targets)
     paths[c] = []
@@ -166,15 +176,17 @@ def run(args):
   # Update paths every 100 ms.
   rate_limiter = rospy.Rate(10)
   publishers = {'c'+str(i): rospy.Publisher('/c'+str(i)+'/path', PoseArray, queue_size=1) for i in range(3)}
-  if PUBLISH_PARTICLES:
-    particle_publisher = rospy.Publisher('/Particles', PointCloud, queue_size=1)
+  if RVIZ_PUBLISH:
+    runner_est_publisher = rospy.Publisher('/runner_particles', PointCloud, queue_size=1)
+    path_publishers = {}
+    for c in CHASERS:
+      path_publishers[c] = rospy.Publisher('/'+c+'_path', Path, queue_size=1)
 
-  gts = MultiGroundtruthPose(['c0', 'c1', 'c2', 'r0', 'r1', 'r2'])
+  gts = MultiGroundtruthPose(CHASERS + RUNNERS)
   runner_ests = {'r0':None, 'r1':None, 'r2':None}
   last_seen = {'r0':None, 'r1':None, 'r2':None}
+  last_target = ''
   
-  potential_field = PotentialField(pf_targets)
-
   frame_id = 0
   print('Chaser controller initialized.')
   while not rospy.is_shutdown():
@@ -184,18 +196,18 @@ def run(args):
       continue
 
     chaser_positions = []
-    for c in ['c0', 'c1', 'c2']:
+    for c in CHASERS:
       chaser_positions.append(gts.poses[c][:2])
 
     # Update estimated runner positions
     r_positions = {}
-    for r in ['r0', 'r1', 'r2']:
+    for r in RUNNERS:
       r_pos = gts.poses[r][:2]
       visible = False
       for c_pos in chaser_positions:
         if in_line_of_sight(r_pos, c_pos):
-          if not visible:
-            print(r + ' at ' + str(r_pos) + 'found by chaser at ' + str(c_pos) + '.')
+          if not runner_ests[r] is None:
+            print('Runner ' + r + ' found at ' + str(r_pos) + ' by chaser at ' + str(c_pos) + '.')
           runner_ests[r] = None
           last_seen[r] = r_pos
           visible = True
@@ -203,10 +215,10 @@ def run(args):
       if not visible:
         if runner_ests[r] is None:
           if last_seen[r] is None:
-            runner_ests[r] = ParticleCloud(NUM_CLOUD_POINTS, CHASER_SPEED, chaser_positions)
+            runner_ests[r] = ParticleCloud(NUM_CLOUD_POINTS, CHASER_SPEED, chaser_positions, r)
           else:
             runner_ests[r] = ParticleCloud(
-              NUM_CLOUD_POINTS, CHASER_SPEED, chaser_positions, last_seen[r])
+              NUM_CLOUD_POINTS, CHASER_SPEED, chaser_positions, r, last_seen[r])
         else:
           runner_ests[r].update(chaser_positions)
         r_positions[r] = runner_ests[r].get_central_position()
@@ -215,40 +227,63 @@ def run(args):
 
     # Allocate chasers to runners
     least_dist = np.inf
-    for r in ['r0', 'r1', 'r2']:
-      for c in ['c0', 'c1', 'c2']:
+    for r in RUNNERS:
+      for c in CHASERS:
         dist = np.linalg.norm(gts.poses[c][:2] - gts.poses[r][:2])
         if dist < least_dist:
           least_dist = dist
           target_runner = r
+    if last_target != target_runner:
+      print('New target runner allocated: ' + target_runner)
+      last_target = target_runner
 
     allocations = {}
-    for c in ['c0', 'c1', 'c2']:
+    for c in CHASERS:
       allocations[c] = target_runner
 
     # Calculate chaser paths
     paths = nav_method(gts.poses, allocations, runner_ests)
 
     # Publish chaser paths
-    for c in ['c0', 'c1', 'c2']:
+    for c in CHASERS:
       path_msg = create_pose_array(paths[c])
       publishers[c].publish(path_msg)
 
-    # Publish localization particles
-    if PUBLISH_PARTICLES:
+    # Publish localization particles and chaser positions
+    if RVIZ_PUBLISH:
       particle_msg = PointCloud()
       particle_msg.header.seq = frame_id
       particle_msg.header.stamp = rospy.Time.now()
       particle_msg.header.frame_id = '/odom'
-      for r_est in runner_ests:
-        for p in r_est.get_positions:
-          pt = Point32()
-          pt.x = p[X]
-          pt.y = p[Y]
-          pt.z = .05
-          particle_msg.points.append(pt)
-      particle_publisher.publish(particle_msg)
+      intensity_channel = ChannelFloat32()
+      intensity_channel.name = 'intensity'
+      particle_msg.channels.append(intensity_channel)
+      for r_est in runner_ests.values():
+        if not r_est is None:
+          for p in r_est.get_positions():
+            pt = Point()
+            pt.x = p[X]
+            pt.y = p[Y]
+            pt.z = .05
+            particle_msg.points.append(pt)
+            intensity_channel.values.append(1)
+      runner_est_publisher.publish(particle_msg)
 
+      for c in CHASERS:
+        path_msg = Path()
+        path_msg.header.seq = frame_id
+        path_msg.header.stamp = rospy.Time.now()
+        path_msg.header.frame_id = '/odom'
+        for position in paths[c]:
+          ps = PoseStamped()
+          ps.header.seq = frame_id
+          ps.header.stamp = rospy.Time.now()
+          ps.header.frame_id = '/odom'
+          p = Pose()
+          p.position = position
+          ps.pose = p
+          path_msg.poses.append(ps)
+        path_publishers[c].publish(path_msg)
 
     rate_limiter.sleep()
     frame_id += 1

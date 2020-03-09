@@ -1,0 +1,11 @@
+<launch>
+  <!-- 
+       Default -Open rViz config to true for local rviz client. 
+       Allows override to disable it for RoboMaker. See hello_world_aws.launch. 
+  -->
+  <arg name="open_rviz_config" default="true"/>
+  <group if="$(arg open_rviz_config)">
+    <node name="rviz" pkg="rviz" type="rviz" args="-d $(find turtlebot3_gazebo)/rviz/turtlebot3_gazebo_model.rviz"/>
+  </group>
+  
+</launch>

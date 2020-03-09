@@ -5,7 +5,7 @@ import numpy as np
 
 # Robot motion commands:
 # http://docs.ros.org/api/geometry_msgs/html/msg/Twist.html
-from geometry_msgs.msg import Twist, PoseArray
+from geometry_msgs.msg import Twist, PoseArray, PointStamped, Point
 # For groundtruth information.
 from gazebo_msgs.msg import ModelStates
 from tf.transformations import euler_from_quaternion
@@ -37,10 +37,13 @@ def run(args):
   # Update control every 10 ms.
   rate_limiter = rospy.Rate(100)
   publisher = rospy.Publisher('/' + c_name + '/cmd_vel', Twist, queue_size=5)
+  if RVIZ_PUBLISH:
+    rviz_publisher = rospy.Publisher('/' + c_name + '_position', PointStamped, queue_size=1)
 
   groundtruth = MultiGroundtruthPose([c_name])
   path_sub = PathSubscriber(c_name)
 
+  frame_id = 0
   while not rospy.is_shutdown():
     # Make sure all measurements are ready.
     if not groundtruth.ready or not path_sub.ready:
@@ -55,7 +58,21 @@ def run(args):
     vel_msg.linear.x = u
     vel_msg.angular.z = w
     publisher.publish(vel_msg)
+
+    if RVIZ_PUBLISH:
+      position_msg = PointStamped()
+      position_msg.header.seq = frame_id
+      position_msg.header.stamp = rospy.Time.now()
+      position_msg.header.frame_id = '/odom'
+      pt = Point()
+      pt.x = pose[X]
+      pt.y = pose[Y]
+      pt.z = .05
+      position_msg.point = pt
+      rviz_publisher.publish(position_msg)
+
     rate_limiter.sleep()
+    frame_id += 1
 
 
 if __name__ == '__main__':

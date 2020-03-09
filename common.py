@@ -24,6 +24,8 @@ from sensor_msgs.msg import LaserScan
 from gazebo_msgs.msg import ModelStates
 from tf.transformations import euler_from_quaternion
 
+RVIZ_PUBLISH = True  # Publish particles for RViz
+
 X = 0
 Y = 1
 YAW = 2
