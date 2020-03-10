@@ -48,7 +48,7 @@ OCCUPIED = 2
 CHASER_SPEED = 0.5
 RUNNER_SPEED = 0.5
 SPEED = 0.5 / 5
-CAPTURE_DIST = 0.25
+CAPTURE_DIST = 0.35
 
 def position_to_point(position):
   p = Point()
@@ -328,10 +328,8 @@ class PotentialField:
 
     # Walls
     if self.use_walls:
-      diffs = [ARENA_OFFSET, ARENA_OFFSET] - np.abs(position)
-      strengths = np.maximum((-diffs + [3, 3]) / 8., [0,0])
-
-      weight += np.sum(strengths)
+      local_dist = np.max(np.abs((position % GRID_FREQ) - GRID_FREQ/2)) ** 2
+      weight += local_dist / 12.
         
     return weight
 
