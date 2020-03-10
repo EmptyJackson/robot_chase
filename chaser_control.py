@@ -232,7 +232,7 @@ def run(args):
     least_dist = np.inf
     for r in RUNNERS:
       for c in CHASERS:
-        if runner_ests[r] is None:
+        if not runner_ests[r] is None:
           # Max distance from a point in the point cloud
           dist = np.max([np.linalg.norm(gts.poses[c][:2] - r_pos) for r_pos in runner_ests[r].get_positions()])
         else:
