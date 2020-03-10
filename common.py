@@ -327,9 +327,9 @@ class PotentialField:
     # Walls
     if self.use_walls:
       diffs = [ARENA_OFFSET, ARENA_OFFSET] - np.abs(position)
-      strengths = (-diffs + [4, 4]) / 4.
+      strengths = np.maximum((-diffs + [3, 3]) / 8., [0,0])
 
-      weight += np.sum(strengths * np.sign(position) * -1)
+      weight += np.sum(strengths)
         
     return weight
 

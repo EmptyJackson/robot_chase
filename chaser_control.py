@@ -5,6 +5,7 @@ import argparse
 import numpy as np
 from common import *
 from rrt_improved import *
+import plots
 
 import nav_msgs.msg as ros_nav
 from nav_msgs.msg import Path
@@ -147,6 +148,9 @@ def rrt(poses, allocations, runner_ests):
     for other_c_id in range(c_id):
       if allocations[chasers[other_c_id]] == target_runner:
         targets.append(chasers[other_c_id])
+
+
+    #plots.plot_field(potential_field, 8)
 
     path, s, g = rrt_star_path(start_pose, goal_position, occupancy_grid, potential_field, targets=targets)
 
@@ -296,6 +300,8 @@ def run(args):
           ps.pose = p
           path_msg.poses.append(ps)
         path_publishers[c].publish(path_msg)
+
+    
 
     rate_limiter.sleep()
     frame_id += 1

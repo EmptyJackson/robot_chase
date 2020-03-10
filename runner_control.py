@@ -11,6 +11,7 @@ import random
 import math
 from common import *
 from rrt_improved import *
+import plots
 
 # Robot motion commands:
 # http://docs.ros.org/api/geometry_msgs/html/msg/Twist.html
@@ -67,12 +68,12 @@ def run(args):
 
   pf_targets = {}
   for chaser in chasers:
-    pf_targets[chaser] = [np.array([0, 0], dtype=np.float32), 1., 5.]
+    pf_targets[chaser] = [np.array([0, 0], dtype=np.float32), 3., 8.]
 
   for runner in other_runners:
     pf_targets[runner] = [np.array([0, 0], dtype=np.float32), 1., 1]
   
-  potential_field = PotentialField(pf_targets, use_walls=False)
+  potential_field = PotentialField(pf_targets, use_walls=True)
 
   frame_id = 0
   print('Runner control initialised.')
@@ -88,6 +89,9 @@ def run(args):
     for runner in other_runners:
       potential_field.update_target(runner, groundtruth.poses[runner][:2])
 
+    #if runner_id == '0':
+    #  plots.plot_field(potential_field, 8)
+
     pose = groundtruth.poses[rname]
 
     path, s, g = rrt_star_path(pose, np.array([6, 2]), occupancy_grid, potential_field, is_open=True)
@@ -96,6 +100,7 @@ def run(args):
     path_msg = create_pose_array(path_list)
     
     publisher.publish(path_msg)
+
 
     if RVIZ_PUBLISH:
       path_msg = Path()
