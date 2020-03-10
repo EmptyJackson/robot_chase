@@ -227,7 +227,6 @@ def run(args):
               NUM_CLOUD_POINTS, CHASER_SPEED, chaser_positions, r, last_seen[r])
         else:
           runner_ests[r].update(chaser_positions)
-      else:
 
     # Allocate chasers to runners
     least_dist = np.inf
@@ -271,8 +270,13 @@ def run(args):
       if runner_ests[target_runner] is None:
         goal_position = gts.poses[target_runner][:2]
       else:
-        # Sample random position from point cloud
-        goal_position = runner_ests[target_runner].get_random_position()
+        # Sample closest position in point cloud
+        min_dist = np.inf
+        for r_pos in runner_ests[target_runner].get_positions():
+          dist = np.linalg.norm(start_pose[:2] - r_pos[:2])
+          if dist < min_dist:
+            goal_position = r_pos
+            min_dist = dist
 
       # Get potential field
       targets = []
