@@ -9,10 +9,13 @@ from geometry_msgs.msg import Twist, PoseArray, PointStamped, Point
 # For groundtruth information.
 from gazebo_msgs.msg import ModelStates
 from tf.transformations import euler_from_quaternion
+from std_msgs.msg import String
 
 from common import *
 
 OCC_GRID = get_occupancy_grid()
+RUNNERS = ['r0', 'r1', 'r2']
+
 
 class PathSubscriber(object):
   def __init__(self, name='c0'):
@@ -41,6 +44,9 @@ def in_line_of_sight(p1, p2):
   return True
 
 
+def capture_runner(r_name_msg):
+  RUNNERS.remove(r_name_msg.data)
+
 def run(args):
   c_id = args.id
   c_name = 'c' + str(c_id)
@@ -52,9 +58,9 @@ def run(args):
   if RVIZ_PUBLISH:
     rviz_publisher = rospy.Publisher('/' + c_name + '_position', PointStamped, queue_size=1)
 
-  runners = ['r0', 'r1', 'r2']
-
-  groundtruth = MultiGroundtruthPose([c_name] + runners)
+  rospy.Subscriber('/captured_runners', String, capture_runner)
+  
+  groundtruth = MultiGroundtruthPose([c_name] + RUNNERS)
   path_sub = PathSubscriber(c_name)
 
 
@@ -88,13 +94,19 @@ def run(args):
     # Calculate and publish control inputs.
     v = get_velocity(pose[:2], path_sub.path, CHASER_SPEED)
 
-    for runner in runners:
-      runner_pos = groundtruth.poses[runner][:2]
+    for runner in RUNNERS:
+      runner_pose = groundtruth.poses[runner]
+      runner_pos = runner_pose[:2]
+      
       diff = runner_pos - pose[:2]
-
-      if np.linalg.norm(diff) < 1 and in_line_of_sight(runner_pos, pose[:2]):
-        v = diff / np.linalg.norm(diff) * 0.1
-        print(c_name, 'beelining')
+      dist = np.linalg.norm(diff)
+      
+      if dist < 1 and in_line_of_sight(runner_pos, pose[:2]):
+        f_pos = runner_pos + np.array([np.cos(runner_pose[2]), np.sin(runner_pose[2])]) * dist
+        f_pos_diff = f_pos - pose[:2]
+        f_pos_dist = np.linalg.norm(f_pos_diff)
+        print('bl', runner_pos, f_pos)
+        v = f_pos_diff / f_pos_dist * CHASER_SPEED
     
     u, w = feedback_linearized(pose, v, 0.1)
     vel_msg = Twist()

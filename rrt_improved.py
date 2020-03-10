@@ -28,7 +28,7 @@ ROBOT_RADIUS = 0.105 / 2.
 GOAL_POSITION = np.array([1.5, 1.5], dtype=np.float32)  # Any orientation is good.
 START_POSE = np.array([-1.5, -1.5, 0.], dtype=np.float32)
 
-MIN_ITERATIONS = 200
+MIN_ITERATIONS = 300
 MAX_ITERATIONS = 2000
 OPEN_ITERATIONS = 700
 
@@ -520,12 +520,20 @@ def rrt_star(start_pose, goal_position, occupancy_grid, potential_field, is_open
         position = sample_grid.sample_random_point(occupancy_grid, start_node.position, goal_position, 0.2)
       else:
         position = sample_grid.sample_random_point(occupancy_grid)
+    #too_close = False
+    #for node in sample_grid.get_close_nodes(position):
+    #  if np.linalg.norm(node.position - position) < .2:
+    #    too_close = True
+    #    break
+    #if too_close:
+    #  continue
+
     # With a random chance, draw the goal position.
     if (np.random.rand() < .05 or i == 0) and not is_open:
       position = goal_position
     # Find closest node in graph.
     # In practice, one uses an efficient spatial structure (e.g., quadtree).
-    potential_parent = sorted(((n, np.linalg.norm(position - n.position)) for n in graph), key=lambda x: x[1])
+    potential_parent = sorted(((n, np.linalg.norm(position - n.position)) for n in sample_grid.get_close_nodes(position)), key=lambda x: x[1])
     # Pick a node at least some distance away but not too far.
     # We also verify that the angles are aligned (within pi / 4).
     u = None
@@ -632,7 +640,41 @@ def rrt_star_path(start_pose, goal_position, occupancy_grid, potential_field, is
       for mid_pos in mid_nodes:
         path_extended.append(mid_pos)
 
-  return path_extended, start_node, final_node
+  ds = np.array([], dtype=np.float32)
+  for i, n in enumerate(path_extended):
+
+    if i != len(path_extended)-1:
+      next_node = path_extended[i+1]
+
+      ds = np.append(ds, np.linalg.norm(next_node - n))
+
+
+  #print('mean,min,max distance between path points extended', ds.mean(), ds.min(), ds.max())
+
+  path_stripped = [path_extended[0]]
+  last_node = path_extended[0]
+
+  for i, n in enumerate(path_extended):
+    if i != 0 and i != len(path_extended)-1:
+      dist = np.linalg.norm(n - last_node)
+      if dist > 0.3:
+        path_stripped.append(n)
+        last_node = n
+
+  path_stripped.append(path_extended[-1])
+
+
+  ds = np.array([], dtype=np.float32)
+  for i, n in enumerate(path_stripped):
+
+    if i != len(path_stripped)-1:
+      next_node = path_stripped[i+1]
+
+      ds = np.append(ds, np.linalg.norm(next_node - n))
+
+  #print('mean,min,max distance between path points stripped', ds.mean(), ds.min(), ds.max())
+
+  return path_stripped, start_node, final_node
   
 
 def find_circle(node_a, node_b):
