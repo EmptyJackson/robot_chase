@@ -150,12 +150,12 @@ def rrt(poses, allocations, runner_ests):
 
     path, s, g = rrt_star_path(start_pose, goal_position, occupancy_grid, potential_field, targets=targets)
 
-    """
-    fig, ax = plt.subplots()
-    occupancy_grid.draw()
-    draw_solution(s, g)
-    plt.show()
-    """
+    
+    #fig, ax = plt.subplots()
+    #occupancy_grid.draw()
+    #draw_solution(s, g)
+    #plt.show()
+    
 
     path_tail = path[-min(len(path), path_tail_max):]
     potential_field.add_target(c, [path_tail, 1., 1.])

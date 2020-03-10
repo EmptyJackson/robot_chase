@@ -51,7 +51,8 @@ def run(args):
   rname = 'r' + str(runner_id)
   rospy.init_node('runner_control' + str(runner_id))
 
-  runners = ['r0', 'r1', 'r2']
+  other_runners = ['r0', 'r1', 'r2']
+  other_runners.remove(rname)
   chasers = ['c0', 'c1', 'c2']
 
   # Update control every 10 ms.
@@ -60,15 +61,18 @@ def run(args):
   if RVIZ_PUBLISH:
     rviz_publisher = rospy.Publisher('/'+rname+'_path', Path, queue_size=1)
   # Keep track of groundtruth position for plotting purposes.
-  groundtruth = MultiGroundtruthPose(names=(runners + chasers))
+  groundtruth = MultiGroundtruthPose(names=(other_runners + chasers + [rname]))
 
   occupancy_grid = get_occupancy_grid()
 
   pf_targets = {}
   for chaser in chasers:
-    pf_targets[chaser] = [np.array([0, 0], dtype=np.float32), 1., 1.]
+    pf_targets[chaser] = [np.array([0, 0], dtype=np.float32), 1., 5.]
+
+  for runner in other_runners:
+    pf_targets[runner] = [np.array([0, 0], dtype=np.float32), 1., 1]
   
-  potential_field = PotentialField(pf_targets)
+  potential_field = PotentialField(pf_targets, use_walls=False)
 
   frame_id = 0
   print('Runner control initialised.')
@@ -80,6 +84,9 @@ def run(args):
 
     for chaser in chasers:
       potential_field.update_target(chaser, groundtruth.poses[chaser][:2])
+
+    for runner in other_runners:
+      potential_field.update_target(runner, groundtruth.poses[runner][:2])
 
     pose = groundtruth.poses[rname]
 

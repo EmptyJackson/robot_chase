@@ -300,13 +300,16 @@ def collision(position):
   return np.any(np.logical_and(on_edge, np.logical_not(in_door)))
 
 class PotentialField:
-  def __init__(self, targets, is_path=False):
+  def __init__(self, targets, is_path=False, use_walls=False):
     # targets = {name : [position, sigma, magnitude], ...}
     self.targets = targets
     self.is_path = is_path
+    self.use_walls = use_walls
 
   def sample(self, position, target_names=None):
     weight = 0.
+
+    # Targets
     if target_names is None:
       target_names = self.targets.keys()
     for target_name in target_names:
@@ -320,6 +323,14 @@ class PotentialField:
       else:
         weight += scipy.stats.norm.pdf(
           np.linalg.norm(position - target[0]), 0, target[1]) * target[2]
+
+    # Walls
+    if self.use_walls:
+      diffs = [ARENA_OFFSET, ARENA_OFFSET] - np.abs(position)
+      strengths = (-diffs + [4, 4]) / 4.
+
+      weight += np.sum(strengths * np.sign(position) * -1)
+        
     return weight
 
   def update_target(self, name, position):
@@ -327,6 +338,18 @@ class PotentialField:
 
   def add_target(self, name, target):
     self.targets[name] = target
+
+  def rand_sample(self):
+    s = 0
+    maximum = 0
+    for _ in range(1000):
+      p = (np.random.random(2) * 2 - 1) * 8
+      sample = self.sample(p)
+      s += sample
+      if sample > maximum:
+        maximum = sample
+    s /= 1000.
+    return s, maximum
 
 if __name__=='__main__':
   get_occupancy_grid().draw()
