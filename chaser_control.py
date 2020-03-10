@@ -127,6 +127,7 @@ def simple(poses, allocations, runner_ests):
   # Return paths as array of Point
   return paths
 
+"""
 def rrt(poses, allocations, runner_ests):
   path_tail_max = 20
   occupancy_grid = get_occupancy_grid()
@@ -159,6 +160,7 @@ def rrt(poses, allocations, runner_ests):
     for point in path:
       paths[c].append(position_to_point(point))
   return paths
+"""
 
 def create_pose_array(path):
   pose_path = []
@@ -174,7 +176,7 @@ def capture_runner(r_name_msg):
 
 def run(args):
   rospy.init_node('chaser_control')
-  nav_method = globals()[args.mode]
+  #nav_method = globals()[args.mode]
 
   # Update paths every 100 ms.
   rate_limiter = rospy.Rate(10)
@@ -257,7 +259,7 @@ def run(args):
 
     if not runner_ests[target_runner] is None:
       chasers_ordered = sorted(chasers,
-        key=lambda x: np.max([np.linalg.norm(gts.poses[x][:2] - r_pos) for r_pos in runner_ests[r].get_positions()]))
+        key=lambda x: np.max([np.linalg.norm(gts.poses[x][:2] - r_pos) for r_pos in runner_ests[target_runner].get_positions()]))
     else:
       chasers_ordered = sorted(chasers, key=lambda x: np.linalg.norm(gts.poses[x][:2] - gts.poses[allocations[x]][:2]))
     
@@ -291,7 +293,7 @@ def run(args):
       path, s, g = rrt_star_path(start_pose, goal_position, occupancy_grid, potential_field, targets=targets)    
 
       path_tail = path[-min(len(path), path_tail_max):]
-      potential_field.add_target(c, [path_tail, .5, 10.])
+      potential_field.add_target(c, [path_tail, 1.5, 10.])
       
       path_arr = [position_to_point(point) for point in path]
       paths[c] = path_arr
