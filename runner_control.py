@@ -75,6 +75,8 @@ def run(args):
   
   potential_field = PotentialField(pf_targets, use_walls=True)
 
+  path = None
+
   frame_id = 0
   print('Runner control initialised.')
   while not rospy.is_shutdown():
@@ -94,7 +96,14 @@ def run(args):
 
     pose = groundtruth.poses[rname]
 
-    path, s, g = rrt_star_path(pose, np.array([6, 2]), occupancy_grid, potential_field, is_open=True)
+    if path is None:
+      start_pose = pose
+    else:
+      path_point = path[min(len(path)-1, 4)]
+      start_pose = np.concatenate((path_point, [pose[2]]))
+      print('!')
+
+    path, s, g = rrt_star_path(start_pose, np.array([6, 2]), occupancy_grid, potential_field, is_open=True)
 
     path_list = [position_to_point(node) for node in path]
     path_msg = create_pose_array(path_list)

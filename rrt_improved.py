@@ -498,7 +498,7 @@ def rrt_star(start_pose, goal_position, occupancy_grid, potential_field, is_open
 
   MAX_DISTANCE_BETWEEN_NODES = 1.5
 
-  sample_grid = SampleGrid(world_size, occupancy_grid.origin, MAX_DISTANCE_BETWEEN_NODES)
+  sample_grid = SampleGrid(world_size, occupancy_grid.origin, MAX_DISTANCE_BETWEEN_NODES + 0.5)
 
   found = False
   
