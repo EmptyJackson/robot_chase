@@ -44,14 +44,33 @@ def run(args):
   path_sub = PathSubscriber(c_name)
 
   frame_id = 0
+  init_publish = False
   while not rospy.is_shutdown():
     # Make sure all measurements are ready.
-    if not groundtruth.ready or not path_sub.ready:
+    if not groundtruth.ready:
+      rate_limiter.sleep()
+      continue
+
+    pose = groundtruth.poses[c_name]
+
+    # Publish initial position
+    if not init_publish or not path_sub.ready:
+      if RVIZ_PUBLISH:
+        position_msg = PointStamped()
+        position_msg.header.seq = frame_id
+        position_msg.header.stamp = rospy.Time.now()
+        position_msg.header.frame_id = '/odom'
+        pt = Point()
+        pt.x = pose[X]
+        pt.y = pose[Y]
+        pt.z = .05
+        position_msg.point = pt
+        rviz_publisher.publish(position_msg)
+      init_publish = True
       rate_limiter.sleep()
       continue
 
     # Calculate and publish control inputs.
-    pose = groundtruth.poses[c_name]
     v = get_velocity(pose[:2], path_sub.path)
     u, w = feedback_linearized(pose, v, 0.1)
     vel_msg = Twist()

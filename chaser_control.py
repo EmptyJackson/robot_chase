@@ -249,7 +249,7 @@ def run(args):
       allocations[c] = target_runner
 
     # Calculate chaser paths
-    path_tail_max = 5
+    path_tail_max = 15
     occupancy_grid = get_occupancy_grid()
     potential_field = PotentialField({}, is_path=True)
     paths = {}
@@ -258,6 +258,7 @@ def run(args):
     chasers_ordered = sorted(chasers, key=lambda x: np.linalg.norm(gts.poses[x][:2] - gts.poses[allocations[x]][:2]))
     
     for c in chasers_ordered:
+      #plots.plot_field(potential_field, ARENA_OFFSET)
       c_id = int(c[1])
       start_pose = gts.poses[c]
       # Estimate or get goal position
