@@ -76,7 +76,7 @@ def adjust_pose(node, final_position, occupancy_grid):
   return final_node
 
 
-def find_midway_node(A, B, theta, occupancy_grid):
+def find_midway_nodes(A, B, theta, occupancy_grid):
   _, angle_add = find_angle_with_obstacles(A, B, theta, occupancy_grid)
 
   beta, C, r, clockwise = find_angle(A, B, theta)
@@ -88,11 +88,20 @@ def find_midway_node(A, B, theta, occupancy_grid):
   
   end_angle = math.atan2(C_to_final[1], C_to_final[0])
 
-  angle = (starting_angle + (angle_add / 2.) + np.pi * 2) % (np.pi * 2)
-  x = C[0] + r * np.cos(angle)
-  y = C[1] + r * np.sin(angle)
+  direction = 1
+  if clockwise:
+    direction = -1
 
-  return np.array([x, y], dtype=np.float32)
+  mid_nodes = []
+
+  for ap in [0.25, 0.5, 0.75]:
+    angle = (starting_angle + (angle_add * ap * direction) + np.pi * 2) % (np.pi * 2)
+    x = C[0] + r * np.cos(angle)
+    y = C[1] + r * np.sin(angle)
+
+    mid_nodes.append(np.array([x, y], dtype=np.float32))
+
+  return mid_nodes
 
 def find_angle_with_obstacles(A, B, theta, occupancy_grid):
   beta, C, r, clockwise = find_angle(A, B, theta)
@@ -619,8 +628,9 @@ def rrt_star_path(start_pose, goal_position, occupancy_grid, potential_field, is
     if i != len(path)-1:
       next_node = path[i+1]
 
-      mid_pos = find_midway_node(node[:2], next_node[:2], node[2], occupancy_grid)
-      path_extended.append((node[:2] + next_node[:2]) / 2.)
+      mid_nodes = find_midway_nodes(node[:2], next_node[:2], node[2], occupancy_grid)
+      for mid_pos in mid_nodes:
+        path_extended.append(mid_pos)
 
   return path_extended, start_node, final_node
   
