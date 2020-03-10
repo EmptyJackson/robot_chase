@@ -236,7 +236,7 @@ def run(args):
     least_dist = np.inf
     for r in RUNNERS:
       for c in CHASERS:
-        dist = np.linalg.norm(gts.poses[c][:2] - gts.poses[r][:2])
+        dist = np.linalg.norm(gts.poses[c][:2] - r_positions[r][:2])
         if dist < least_dist:
           least_dist = dist
           target_runner = r
