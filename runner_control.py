@@ -96,7 +96,7 @@ def run(args):
 
     pose = groundtruth.poses[rname]
 
-    if path is None:
+    if path is None or frame_id % 2 == 0:
       start_pose = pose
     else:
       path_point = path[min(len(path)-1, 4)]
