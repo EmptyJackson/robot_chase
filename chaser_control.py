@@ -150,15 +150,7 @@ def rrt(poses, allocations, runner_ests):
         targets.append(chasers[other_c_id])
 
 
-    #plots.plot_field(potential_field, 8)
-
     path, s, g = rrt_star_path(start_pose, goal_position, occupancy_grid, potential_field, targets=targets)
-
-    
-    #fig, ax = plt.subplots()
-    #occupancy_grid.draw()
-    #draw_solution(s, g)
-    #plt.show()
     
 
     path_tail = path[-min(len(path), path_tail_max):]
@@ -257,35 +249,61 @@ def run(args):
       allocations[c] = target_runner
 
     # Calculate chaser paths
-    paths = nav_method(gts.poses, allocations, runner_ests)
+    path_tail_max = 5
+    occupancy_grid = get_occupancy_grid()
+    potential_field = PotentialField({}, is_path=True)
+    paths = {}
+    chasers = ['c0', 'c1', 'c2']
+    for c_id, c in enumerate(chasers):
+      start_pose = gts.poses[c]
+      # Estimate or get goal position
+      target_runner = allocations[c]
+      if runner_ests[target_runner] is None:
+        goal_position = gts.poses[target_runner][:2]
+      else:
+        # Sample random position from point cloud
+        goal_position = runner_ests[target_runner].get_random_position()
 
-    # Publish chaser paths
-    for c in CHASERS:
-      path_msg = create_pose_array(paths[c])
+      # Get potential field
+      targets = []
+      for other_c_id in range(c_id):
+        if allocations[chasers[other_c_id]] == target_runner:
+          targets.append(chasers[other_c_id])
+
+
+      path, s, g = rrt_star_path(start_pose, goal_position, occupancy_grid, potential_field, targets=targets)    
+
+      path_tail = path[-min(len(path), path_tail_max):]
+      potential_field.add_target(c, [path_tail, 1., 1.])
+      
+      path_arr = [position_to_point(point) for point in path]
+      paths[c] = path_arr
+
+      # Publish chaser paths
+      path_msg = create_pose_array(path_arr)
       publishers[c].publish(path_msg)
 
-    # Publish localization particles and chaser positions
-    if RVIZ_PUBLISH:
-      particle_msg = PointCloud()
-      particle_msg.header.seq = frame_id
-      particle_msg.header.stamp = rospy.Time.now()
-      particle_msg.header.frame_id = '/odom'
-      intensity_channel = ChannelFloat32()
-      intensity_channel.name = 'intensity'
-      particle_msg.channels.append(intensity_channel)
-      for r in RUNNERS:
-        r_est = runner_ests[r]
-        if not r_est is None:
-          for p in r_est.get_positions():
-            pt = Point()
-            pt.x = p[X]
-            pt.y = p[Y]
-            pt.z = .05
-            particle_msg.points.append(pt)
-            intensity_channel.values.append(int(r[1]))
-      runner_est_publisher.publish(particle_msg)
+      # Publish localization particles and chaser positions
+      if RVIZ_PUBLISH:
+        particle_msg = PointCloud()
+        particle_msg.header.seq = frame_id
+        particle_msg.header.stamp = rospy.Time.now()
+        particle_msg.header.frame_id = '/odom'
+        intensity_channel = ChannelFloat32()
+        intensity_channel.name = 'intensity'
+        particle_msg.channels.append(intensity_channel)
+        for r in RUNNERS:
+          r_est = runner_ests[r]
+          if not r_est is None:
+            for p in r_est.get_positions():
+              pt = Point()
+              pt.x = p[X]
+              pt.y = p[Y]
+              pt.z = .05
+              particle_msg.points.append(pt)
+              intensity_channel.values.append(int(r[1]))
+        runner_est_publisher.publish(particle_msg)
 
-      for c in CHASERS:
         path_msg = Path()
         path_msg.header.seq = frame_id
         path_msg.header.stamp = rospy.Time.now()
