@@ -12,6 +12,8 @@ from tf.transformations import euler_from_quaternion
 
 from common import *
 
+OCC_GRID = get_occupancy_grid()
+
 class PathSubscriber(object):
   def __init__(self, name='c0'):
     rospy.Subscriber('/'+name+'/path', PoseArray, self.callback)
@@ -28,6 +30,16 @@ class PathSubscriber(object):
   def path(self):
     return self._path
 
+def in_line_of_sight(p1, p2):
+  sample_rate = 10 # Samples per meter
+  n_samples = np.linalg.norm(p1 - p2) * sample_rate
+  x = np.linspace(p1[X], p2[X], n_samples)
+  y = np.linspace(p1[Y], p2[Y], n_samples)
+  for coord in zip(x, y):
+    if OCC_GRID.is_occupied(coord):
+      return False
+  return True
+
 
 def run(args):
   c_id = args.id
@@ -40,8 +52,11 @@ def run(args):
   if RVIZ_PUBLISH:
     rviz_publisher = rospy.Publisher('/' + c_name + '_position', PointStamped, queue_size=1)
 
-  groundtruth = MultiGroundtruthPose([c_name])
+  runners = ['r0', 'r1', 'r2']
+
+  groundtruth = MultiGroundtruthPose([c_name] + runners)
   path_sub = PathSubscriber(c_name)
+
 
   frame_id = 0
   init_publish = False
@@ -71,7 +86,16 @@ def run(args):
       continue
 
     # Calculate and publish control inputs.
-    v = get_velocity(pose[:2], path_sub.path)
+    v = get_velocity(pose[:2], path_sub.path, CHASER_SPEED)
+
+    for runner in runners:
+      runner_pos = groundtruth.poses[runner][:2]
+      diff = runner_pos - pose[:2]
+
+      if np.linalg.norm(diff) < 1 and in_line_of_sight(runner_pos, pose[:2]):
+        v = diff / np.linalg.norm(diff) * 0.1
+        print(c_name, 'beelining')
+    
     u, w = feedback_linearized(pose, v, 0.1)
     vel_msg = Twist()
     vel_msg.linear.x = u

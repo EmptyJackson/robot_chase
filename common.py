@@ -45,9 +45,8 @@ RESOLUTION = 0.05
 FREE = 0
 OCCUPIED = 2
 
-CHASER_SPEED = 0.5
-RUNNER_SPEED = 0.5
-SPEED = 0.5 / 5
+CHASER_SPEED = 0.1
+RUNNER_SPEED = 0.1
 CAPTURE_DIST = 0.35
 
 def position_to_point(position):
@@ -88,7 +87,7 @@ class MultiGroundtruthPose(object):
   def poses(self):
     return self._poses
 
-def get_velocity(position, path_points):
+def get_velocity(position, path_points, speed):
   v = np.zeros_like(position)
   if len(path_points) == 0:
     return v
@@ -110,45 +109,6 @@ def get_velocity(position, path_points):
   next_pt = min(best_pt+1, len(path_points)-1)
   v = path_points[next_pt] - position
   return v * speed / np.linalg.norm(v)
-
-def get_velocity_mikey(position, path_points):
-  v = np.zeros_like(position)
-  if len(path_points) == 0:
-    return v
-  # Stop moving if the goal is reached.
-  if np.linalg.norm(position - path_points[-1]) < .2:
-    return v
-
-  closestIndex = -1
-  closest = 99999
-
-  for pIndex in range(len(path_points)):
-    pp = path_points[pIndex]
-
-    d = np.linalg.norm(pp - position)
-    if d < closest:
-      closest = d
-      closestIndex = pIndex
-
-  if closestIndex == 0:
-    d_prev = 9999
-  else:
-    d_prev = np.linalg.norm(path_points[closestIndex-1] - position)
-
-  if closestIndex == len(path_points)-1:
-    d_next = 9999
-  else:
-    d_next = np.linalg.norm(path_points[closestIndex+1] - position)
-
-  if d_prev < d_next:
-    v = path_points[closestIndex] - position
-  else:
-    v = path_points[closestIndex+1] - position
-
-  v /= np.linalg.norm(v)
-  v *= SPEED
-
-  return v
 
 def feedback_linearized(pose, velocity, epsilon):
   u = 0.  # [m/s]

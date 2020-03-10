@@ -99,7 +99,7 @@ def run(args):
         capture_publisher.publish(s)
         return
 
-    v = get_velocity(pose[:2], path_sub.path)
+    v = get_velocity(pose[:2], path_sub.path, RUNNER_SPEED)
     u, w = feedback_linearized(pose, v, 0.1)
 
     vel_msg = Twist()
