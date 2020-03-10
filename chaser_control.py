@@ -255,11 +255,11 @@ def run(args):
     paths = {}
     chasers = ['c0', 'c1', 'c2']
 
-    if runner_ests[target_runner] is None:
+    if not runner_ests[target_runner] is None:
       chasers_ordered = sorted(chasers,
         key=lambda x: np.max([np.linalg.norm(gts.poses[x][:2] - r_pos) for r_pos in runner_ests[r].get_positions()]))
     else:
-      chasers_ordered = sorted(chasers, key=lambda x: np.linalg.norm(gts.poses[x][:2] - r_positions[allocations[x]][:2]))
+      chasers_ordered = sorted(chasers, key=lambda x: np.linalg.norm(gts.poses[x][:2] - gts.poses[allocations[x]][:2]))
     
     for c in chasers_ordered:
       #plots.plot_field(potential_field, ARENA_OFFSET)
@@ -291,7 +291,7 @@ def run(args):
       path, s, g = rrt_star_path(start_pose, goal_position, occupancy_grid, potential_field, targets=targets)    
 
       path_tail = path[-min(len(path), path_tail_max):]
-      potential_field.add_target(c, [path_tail, 1., 1.])
+      potential_field.add_target(c, [path_tail, .5, 10.])
       
       path_arr = [position_to_point(point) for point in path]
       paths[c] = path_arr
