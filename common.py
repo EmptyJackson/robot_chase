@@ -313,6 +313,8 @@ class PotentialField:
     if target_names is None:
       target_names = self.targets.keys()
     for target_name in target_names:
+      if not target_name in self.targets.keys():
+        continue
       target = self.targets[target_name]
       if self.is_path:
         for path_point in target[0]:

@@ -254,7 +254,11 @@ def run(args):
     potential_field = PotentialField({}, is_path=True)
     paths = {}
     chasers = ['c0', 'c1', 'c2']
-    for c_id, c in enumerate(chasers):
+
+    chasers_ordered = sorted(chasers, key=lambda x: np.linalg.norm(gts.poses[x][:2] - gts.poses[allocations[x]][:2]))
+    
+    for c in chasers_ordered:
+      c_id = int(c[1])
       start_pose = gts.poses[c]
       # Estimate or get goal position
       target_runner = allocations[c]
@@ -266,11 +270,14 @@ def run(args):
 
       # Get potential field
       targets = []
-      for other_c_id in range(c_id):
+      for other_c_id in range(3):
+        if other_c_id == c_id:
+          continue
+        
         if allocations[chasers[other_c_id]] == target_runner:
           targets.append(chasers[other_c_id])
 
-
+      
       path, s, g = rrt_star_path(start_pose, goal_position, occupancy_grid, potential_field, targets=targets)    
 
       path_tail = path[-min(len(path), path_tail_max):]
