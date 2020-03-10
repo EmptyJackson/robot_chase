@@ -128,7 +128,7 @@ def simple(poses, allocations, runner_ests):
   return paths
 
 def rrt(poses, allocations, runner_ests):
-  path_tail_max = 5
+  path_tail_max = 20
   occupancy_grid = get_occupancy_grid()
   potential_field = PotentialField({}, is_path=True)
   paths = {}
@@ -149,9 +149,9 @@ def rrt(poses, allocations, runner_ests):
       if allocations[chasers[other_c_id]] == target_runner:
         targets.append(chasers[other_c_id])
 
+    #plots.plot_field(potential_field, 8)
 
     path, s, g = rrt_star_path(start_pose, goal_position, occupancy_grid, potential_field, targets=targets)
-    
 
     path_tail = path[-min(len(path), path_tail_max):]
     potential_field.add_target(c, [path_tail, 1., 1.])
