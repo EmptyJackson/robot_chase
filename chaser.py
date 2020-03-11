@@ -105,7 +105,6 @@ def run(args):
         f_pos = runner_pos + np.array([np.cos(runner_pose[2]), np.sin(runner_pose[2])]) * dist
         f_pos_diff = f_pos - pose[:2]
         f_pos_dist = np.linalg.norm(f_pos_diff)
-        print('bl', runner_pos, f_pos)
         v = f_pos_diff / f_pos_dist * CHASER_SPEED
     
     u, w = feedback_linearized(pose, v, 0.1)
