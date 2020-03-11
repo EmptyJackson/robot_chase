@@ -172,7 +172,6 @@ def capture_runner(r_name_msg):
 
 def run(args):
   rospy.init_node('chaser_control')
-  nav_method = globals()[args.mode]
 
   # Update paths every 100 ms.
   rate_limiter = rospy.Rate(10)
@@ -205,7 +204,6 @@ def run(args):
       chaser_positions.append(gts.poses[c][:2])
 
     # Update estimated runner positions
-    r_positions = {}
     for r in RUNNERS:
       r_pos = gts.poses[r][:2]
       visible = False
@@ -226,15 +224,17 @@ def run(args):
               NUM_CLOUD_POINTS, CHASER_SPEED, chaser_positions, r, last_seen[r])
         else:
           runner_ests[r].update(chaser_positions)
-        r_positions[r] = runner_ests[r].get_central_position()
-      else:
-        r_positions[r] = r_pos
+        
 
     # Allocate chasers to runners
     least_dist = np.inf
     for r in RUNNERS:
       for c in CHASERS:
-        dist = np.linalg.norm(gts.poses[c][:2] - r_positions[r][:2])
+        if not runner_ests[r] is None:
+          # Max distance from a point in the point cloud
+          dist = np.max([np.linalg.norm(gts.poses[c][:2] - r_pos) for r_pos in runner_ests[r].get_positions()])
+        else:
+          dist = np.linalg.norm(gts.poses[c][:2] - gts.poses[r][:2])
         if dist < least_dist:
           least_dist = dist
           target_runner = r
@@ -253,7 +253,11 @@ def run(args):
     paths = {}
     chasers = ['c0', 'c1', 'c2']
 
-    chasers_ordered = sorted(chasers, key=lambda x: np.linalg.norm(gts.poses[x][:2] - gts.poses[allocations[x]][:2]))
+    if not runner_ests[target_runner] is None:
+      chasers_ordered = sorted(chasers,
+        key=lambda x: np.max([np.linalg.norm(gts.poses[x][:2] - r_pos) for r_pos in runner_ests[target_runner].get_positions()]))
+    else:
+      chasers_ordered = sorted(chasers, key=lambda x: np.linalg.norm(gts.poses[x][:2] - gts.poses[allocations[x]][:2]))
     
     for c in chasers_ordered:
       #plots.plot_field(potential_field, ARENA_OFFSET)
@@ -264,8 +268,13 @@ def run(args):
       if runner_ests[target_runner] is None:
         goal_position = gts.poses[target_runner][:2]
       else:
-        # Sample random position from point cloud
-        goal_position = runner_ests[target_runner].get_random_position()
+        # Sample closest position in point cloud
+        min_dist = np.inf
+        for r_pos in runner_ests[target_runner].get_positions():
+          dist = np.linalg.norm(start_pose[:2] - r_pos[:2])
+          if dist < min_dist:
+            goal_position = r_pos
+            min_dist = dist
 
       # Get potential field
       targets = []
@@ -281,7 +290,7 @@ def run(args):
       path, s, g = rrt_star_path(start_pose, goal_position, occupancy_grid, potential_field, targets=targets)    
 
       path_tail = path[-min(len(path), path_tail_max):]
-      potential_field.add_target(c, [path_tail, 1., 1.])
+      potential_field.add_target(c, [path_tail, 1.5, 10.])
       
       path_arr = [position_to_point(point) for point in path]
       paths[c] = path_arr
@@ -289,6 +298,32 @@ def run(args):
       # Publish chaser paths
       path_msg = create_pose_array(path_arr)
       publishers[c].publish(path_msg)
+
+      # Update particle clouds
+      chaser_positions = []
+      for c_name in CHASERS:
+        chaser_positions.append(gts.poses[c_name][:2])
+
+      for r in RUNNERS:
+        r_pos = gts.poses[r][:2]
+        visible = False
+        for c_pos in chaser_positions:
+          if in_line_of_sight(r_pos, c_pos):
+            if not runner_ests[r] is None:
+              print('Runner ' + r + ' found at ' + str(r_pos) + ' by chaser at ' + str(c_pos) + '.')
+            runner_ests[r] = None
+            last_seen[r] = r_pos
+            visible = True
+            break
+        if not visible:
+          if runner_ests[r] is None:
+            if last_seen[r] is None:
+              runner_ests[r] = ParticleCloud(NUM_CLOUD_POINTS, CHASER_SPEED, chaser_positions, r)
+            else:
+              runner_ests[r] = ParticleCloud(
+                NUM_CLOUD_POINTS, CHASER_SPEED, chaser_positions, r, last_seen[r])
+          else:
+            runner_ests[r].update(chaser_positions)
 
       # Publish localization particles and chaser positions
       if RVIZ_PUBLISH:
