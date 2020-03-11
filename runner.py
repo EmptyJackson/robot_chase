@@ -63,6 +63,9 @@ def run(args):
   # Keep track of groundtruth position for plotting purposes.
   groundtruth = MultiGroundtruthPose(names=(['c0', 'c1', 'c2', rname]))
 
+  rev_frames = 0
+  had_path = False
+
   path_sub = PathSubscriber(rname)
   frame_id = 0
   init_publish = False
@@ -99,8 +102,23 @@ def run(args):
         capture_publisher.publish(s)
         return
 
-    v = get_velocity(pose[:2], path_sub.path, RUNNER_SPEED)
+    path = path_sub.path
+
+    if path is None or len(path) == 0:
+      if had_path:
+        rev_frames = 50
+        print('runner rev from wall')
+
+    else:
+      had_path = True
+
+    v = get_velocity(pose[:2], path, RUNNER_SPEED)
     u, w = feedback_linearized(pose, v, 0.1)
+
+    if rev_frames > 0:
+      u = -CHASER_SPEED
+      w = 0
+      print('runner r')
 
     vel_msg = Twist()
     vel_msg.linear.x = u
@@ -120,6 +138,9 @@ def run(args):
 
     rate_limiter.sleep()
     frame_id += 1
+
+    if rev_frames > 0:
+      rev_frames -= 1
 
 
 if __name__ == '__main__':

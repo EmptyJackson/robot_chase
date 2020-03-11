@@ -63,6 +63,8 @@ def run(args):
   groundtruth = MultiGroundtruthPose([c_name] + RUNNERS)
   path_sub = PathSubscriber(c_name)
 
+  rev_frames = 0
+  had_path = False
 
   frame_id = 0
   init_publish = False
@@ -91,8 +93,24 @@ def run(args):
       rate_limiter.sleep()
       continue
 
+    for runner in ['r0', 'r1', 'r2']:
+      if np.linalg.norm(groundtruth.poses[runner][:2] - pose[:2]) < 0.15:
+        rev_frames = 50
+        print('rev from runner')
+
+    path = path_sub.path
+
+    if path is None or len(path) == 0:
+      if had_path:
+        rev_frames = 50
+        print('rev from wall')
+
+    else:
+      had_path = True
+    
+    
     # Calculate and publish control inputs.
-    v = get_velocity(pose[:2], path_sub.path, CHASER_SPEED)
+    v = get_velocity(pose[:2], path, CHASER_SPEED)
 
     for runner in RUNNERS:
       runner_pose = groundtruth.poses[runner]
@@ -108,6 +126,12 @@ def run(args):
         v = f_pos_diff / f_pos_dist * CHASER_SPEED
     
     u, w = feedback_linearized(pose, v, 0.1)
+
+    if rev_frames > 0:
+      u = -CHASER_SPEED
+      w = 0
+      print('r')
+    
     vel_msg = Twist()
     vel_msg.linear.x = u
     vel_msg.angular.z = w
@@ -127,6 +151,8 @@ def run(args):
 
     rate_limiter.sleep()
     frame_id += 1
+    if rev_frames > 0:
+      rev_frames -= 1
 
 
 if __name__ == '__main__':
