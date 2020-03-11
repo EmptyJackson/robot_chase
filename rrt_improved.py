@@ -438,6 +438,7 @@ class Node(object):
     self.parent.neighbors.append(self)
 
     self.pf_local = potential_field.sample(self.pose[:2], targets)
+    self.pf_local *= self.pf_local
     self.pf_sum = self.parent.pf_sum + self.pf_local
 
     self.cost = self.parent.cost + new_local_cost + self.pf_local
@@ -489,7 +490,7 @@ def rrt_star(start_pose, goal_position, occupancy_grid, potential_field, is_open
   # RRT builds a graph one node at a time.
   graph = []
   start_node = Node(start_pose)
-  start_node.pf_sum = potential_field.sample(start_pose[:2])
+  start_node.pf_sum = potential_field.sample(start_pose[:2]) ** 2
   final_node = None
 
   world_width = len(occupancy_grid.values) * occupancy_grid.resolution
@@ -582,7 +583,7 @@ def rrt_star(start_pose, goal_position, occupancy_grid, potential_field, is_open
         elif is_open and arc_length < node.local_cost:
           node.update_parent(v, arc_length, occupancy_grid, potential_field, targets)
 
-    v.pf_local = potential_field.sample(v.position, targets)
+    v.pf_local = potential_field.sample(v.position, targets) ** 2
     v.pf_sum = v.pf_local + u.pf_sum
 
     for node in graph[:]:
