@@ -96,7 +96,7 @@ def run(args):
 
     for c in ['c0', 'c1', 'c2']:
       if np.linalg.norm(groundtruth.poses[c][:2] - pose[:2]) < CAPTURE_DIST:
-        print('Runner ', rname, ' captured by chaser ', c)
+        print('Runner ', rname, ' captured by chaser ', c, 'at time', rospy.get_time())
         s = String()
         s.data = rname
         capture_publisher.publish(s)
@@ -107,7 +107,6 @@ def run(args):
     if path is None or len(path) == 0:
       if had_path:
         rev_frames = 50
-        print('runner rev from wall')
 
     else:
       had_path = True
@@ -118,7 +117,6 @@ def run(args):
     if rev_frames > 0:
       u = -CHASER_SPEED
       w = 0
-      print('runner r')
 
     vel_msg = Twist()
     vel_msg.linear.x = u

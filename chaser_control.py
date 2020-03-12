@@ -203,6 +203,7 @@ def run(args):
     for c in CHASERS:
       chaser_positions.append(gts.poses[c][:2])
 
+
     # Update estimated runner positions
     for r in RUNNERS:
       r_pos = gts.poses[r][:2]

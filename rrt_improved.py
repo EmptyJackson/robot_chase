@@ -511,8 +511,6 @@ def rrt_star(start_pose, goal_position, occupancy_grid, potential_field, is_open
   sample_grid.add_node(start_node)
 
   for i in range(OPEN_ITERATIONS if is_open else MAX_ITERATIONS):
-    if i % 100 == 0:
-      print(i)
 
     if i < 50:
       position = sample_grid.sample_random_close_point(start_node.position, occupancy_grid)
