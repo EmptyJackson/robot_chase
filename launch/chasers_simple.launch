@@ -1,0 +1,3 @@
+<launch>
+	<node pkg="robot_chase" type="chaser_naive.py" name="chasers_simple" args="--id=0" output="screen"></node>
+</launch>

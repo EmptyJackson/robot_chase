@@ -116,6 +116,7 @@ catkin_install_python(PROGRAMS
   runner.py
   chaser_control.py
   runner_control.py
+  chaser_naive.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
