@@ -70,75 +70,8 @@ def braitenberg(front, front_left, front_right, left, right):
 
   return u, w
 
-def rule_based(front, front_left, front_right, left, right):
-  u = 0.
-  w = 0.
-
-  SLOW_SPEED = 0.1
-  FAST_SPEED = 0.3
-  TURN_SPEED = 0.6
-
-  d = 0.5
-  vcd = 0.15
-
-  f = front < d
-  fl = front_left < d or left < d / 3.
-  fr = front_right < d or right < d / 3.
-
-  very_close = front < vcd or front_left < vcd or front_right < vcd
-
-  #111
-  if f and fl and fr:
-    if very_close:
-      u = -SLOW_SPEED
-      w = 0
-    else:
-      u = SLOW_SPEED
-      w = TURN_SPEED
-  #110
-  elif f and fl and not fr:
-    u = SLOW_SPEED
-    w = -TURN_SPEED
-  #011
-  elif f and not fl and fr:
-    u = SLOW_SPEED
-    w = TURN_SPEED
-  #010
-  elif f and not fl and not fr:
-    if very_close:
-      u = -SLOW_SPEED
-      w = 0
-    else:
-      u = SLOW_SPEED
-      w = TURN_SPEED
-  #101
-  elif not f and fl and fr:
-    if very_close:
-      u = -SLOW_SPEED
-      w = 0
-    else:
-      u = SLOW_SPEED
-      w = TURN_SPEED
-  #100
-  elif not f and fl and not fr:
-    u = SLOW_SPEED
-    w = -TURN_SPEED
-  #001
-  elif not f and not fl and fr:
-    u = SLOW_SPEED
-    w = TURN_SPEED
-  #000
-  elif not f and not fl and not fr:
-    u = FAST_SPEED
-    w = 0
-  else:
-    print('err invalid sensor config:', f, fl, fr)
-    
-  return u, w
-
 def capture_runner(r_name_msg):
   RUNNERS.remove(r_name_msg.data)
-
 
 def run(args):
   c_id = args.id
@@ -167,26 +100,23 @@ def run(args):
       rate_limiter.sleep()
       continue
     pose = groundtruth.poses[c_name]
+    
+    best_dir = None
+    best_dist = 3.    # Minimum distance of 3 meters for a chaser to target a runner
+    for r in RUNNERS:
+      r_dir = groundtruth.poses[r][:2] - pose[:2]
+      dist = np.linalg.norm(r_dir)
+      if dist < best_dist:
+        best_dist = dist
+        best_dir = r_dir
+    
+    if not best_dir is None:
+      v = best_dir / best_dist
+      u, w = feedback_linearized(pose, v, 0.1)
+    else:
+      u, w = braitenberg(*laser.measurements)
 
-    # Publish initial position
-    if not init_publish:
-      if RVIZ_PUBLISH:
-        position_msg = PointStamped()
-        position_msg.header.seq = frame_id
-        position_msg.header.stamp = rospy.Time.now()
-        position_msg.header.frame_id = '/odom'
-        pt = Point()
-        pt.x = pose[X]
-        pt.y = pose[Y]
-        pt.z = .05
-        position_msg.point = pt
-        rviz_publisher.publish(position_msg)
-      init_publish = True
-      rate_limiter.sleep()
-      continue
-    
-    u, w = braitenberg(*laser.measurements)
-    
+
     vel_msg = Twist()
     vel_msg.linear.x = u
     vel_msg.angular.z = w

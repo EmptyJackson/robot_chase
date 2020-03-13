@@ -114,10 +114,6 @@ def feedback_linearized(pose, velocity, epsilon):
   u = 0.  # [m/s]
   w = 0.  # [rad/s] going counter-clockwise.
 
-  # MISSING: Implement feedback-linearization to follow the velocity
-  # vector given as argument. Epsilon corresponds to the distance of
-  # linearized point in front of the robot.
-
   theta = pose[YAW]
   dxp = velocity[0]
   dyp = velocity[1]
