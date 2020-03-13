@@ -307,6 +307,62 @@ class PotentialField:
     s /= 1000.
     return s, maximum
 
+
+class SimpleLaser(object):
+  def __init__(self):
+    rospy.Subscriber('/c0/scan', LaserScan, self.callback)
+    self._angles = [0., np.pi / 4., -np.pi / 4., np.pi / 2., -np.pi / 2.]
+    self._width = np.pi / 180. * 10.  # 10 degrees cone of view.
+    self._measurements = [float('inf')] * len(self._angles)
+    self._indices = None
+
+  def callback(self, msg):
+    # Helper for angles.
+    def _within(x, a, b):
+      pi2 = np.pi * 2.
+      x %= pi2
+      a %= pi2
+      b %= pi2
+      if a < b:
+        return a <= x and x <= b
+      return a <= x or x <= b;
+
+    # Compute indices the first time.
+    if self._indices is None:
+      self._indices = [[] for _ in range(len(self._angles))]
+      for i, d in enumerate(msg.ranges):
+        angle = msg.angle_min + i * msg.angle_increment
+        for j, center_angle in enumerate(self._angles):
+          if _within(angle, center_angle - self._width / 2., center_angle + self._width / 2.):
+            self._indices[j].append(i)
+
+    ranges = np.array(msg.ranges)
+    for i, idx in enumerate(self._indices):
+      # We do not take the minimum range of the cone but the 10-th percentile for robustness.
+      self._measurements[i] = np.percentile(ranges[idx], 10)
+
+  @property
+  def ready(self):
+    return not np.isnan(self._measurements[0])
+
+  @property
+  def measurements(self):
+    return self._measurements
+
+
+def braitenberg(front, front_left, front_right, left, right):
+  s = np.tanh([left, front_left, front, front_right, right])
+  s = [1 - x for x in s]
+
+  u_weights = [0, -0.5, -1, -0.5, 0]
+  w_weights = [-0.5, -1, 0, 1, 0.5]
+
+  u = np.dot(s, u_weights) + 1.
+  w = np.dot(s, w_weights)
+
+  return u, w
+
+
 if __name__=='__main__':
   get_occupancy_grid().draw()
   plt.show()

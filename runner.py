@@ -50,8 +50,10 @@ class PathSubscriber(object):
 
 def run(args):
   runner_id = args.id
-  rname = 'r' + str(runner_id)
-  rospy.init_node('runner' + str(runner_id))
+  method = args.method
+
+  rname = 'r' + runner_id
+  rospy.init_node('runner' + runner_id)
 
   # Update control every 10 ms.
   rate_limiter = rospy.Rate(100)
@@ -64,9 +66,15 @@ def run(args):
   groundtruth = MultiGroundtruthPose(names=(['c0', 'c1', 'c2', rname]))
 
   rev_frames = 0
-  had_path = False
 
-  path_sub = PathSubscriber(rname)
+  if method == 'rrt':
+    had_path = False
+    path_sub = PathSubscriber(rname)
+  elif method == 'braitenberg':
+    laser = SimpleLaser()
+  else:
+    raise ValueError("Runner mode must be in [rrt, braitenberg]")
+
   frame_id = 0
   init_publish = False
   while not rospy.is_shutdown():
@@ -78,7 +86,7 @@ def run(args):
     pose = groundtruth.poses[rname]
 
     # Publish initial position
-    if not init_publish or not path_sub.ready:
+    if not init_publish:
       if RVIZ_PUBLISH:
         position_msg = PointStamped()
         position_msg.header.seq = frame_id
@@ -91,6 +99,8 @@ def run(args):
         position_msg.point = pt
         rviz_publisher.publish(position_msg)
       init_publish = True
+
+    if method == 'rrt' and not path_sub.ready:
       rate_limiter.sleep()
       continue
 
@@ -102,21 +112,33 @@ def run(args):
         capture_publisher.publish(s)
         return
 
-    path = path_sub.path
+    if method == 'rrt':
+      path = path_sub.path
 
-    if path is None or len(path) == 0:
-      if had_path:
-        rev_frames = 50
+      if path is None or len(path) == 0:
+        if had_path:
+          rev_frames = 50
 
-    else:
-      had_path = True
+      else:
+        had_path = True
 
-    v = get_velocity(pose[:2], path, RUNNER_SPEED)
-    u, w = feedback_linearized(pose, v, 0.1)
+      v = get_velocity(pose[:2], path, RUNNER_SPEED)
+      u, w = feedback_linearized(pose, v, 0.1)
 
-    if rev_frames > 0:
-      u = -CHASER_SPEED
-      w = 0
+      if rev_frames > 0:
+        u = -CHASER_SPEED
+        w = 0
+
+    elif method == 'braitenberg':
+      us, ws = [0., 0.], [0., 0.]
+      v = np.zeros(2, dtype=np.float32)
+      for c in ['c0', 'c1', 'c2']:
+        d = pose[:2] - groundtruth.poses[c][:2]
+        v += d / (np.linalg.norm(d) ** 2)
+      us[0], ws[0] = feedback_linearized(pose, v, 0.1)
+      us[1], ws[1] = braitenberg(*laser.measurements)
+      u, w = sum(us), sum(ws)
+      u /= 10
 
     vel_msg = Twist()
     vel_msg.linear.x = u
@@ -142,8 +164,9 @@ def run(args):
 
 
 if __name__ == '__main__':
-  parser = argparse.ArgumentParser(description='Runners control')
-  parser.add_argument('--id', action='store', default='-1', help='Method.')
+  parser = argparse.ArgumentParser(description='Runner controller')
+  parser.add_argument('--id', action='store', default='-1', help='Runner id.')
+  parser.add_argument('--method', action='store', default='rrt', help='Method.')
   args, unknown = parser.parse_known_args()
   try:
     run(args)

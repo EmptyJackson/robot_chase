@@ -49,8 +49,14 @@ def create_pose_array(path):
 
 def run(args):
   runner_id = args.id
-  rname = 'r' + str(runner_id)
-  rospy.init_node('runner_control' + str(runner_id))
+  method = args.method
+
+  # No path planning for reactive controllers
+  if method == 'braitenberg':
+    return
+
+  rname = 'r' + runner_id
+  rospy.init_node('runner_control' + runner_id)
 
   other_runners = ['r0', 'r1', 'r2']
   other_runners.remove(rname)
@@ -132,10 +138,10 @@ def run(args):
     frame_id += 1
     
 
-
 if __name__ == '__main__':
-  parser = argparse.ArgumentParser(description='Runners control')
-  parser.add_argument('--id', action='store', default='-1', help='Method.')
+  parser = argparse.ArgumentParser(description='Runner path planner')
+  parser.add_argument('--id', action='store', default='-1', help='Runner id.')
+  parser.add_argument('--method', action='store', default='rrt', help='Method.')
   args, unknown = parser.parse_known_args()
   try:
     run(args)
