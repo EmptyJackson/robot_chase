@@ -68,11 +68,6 @@ def braitenberg(front, front_left, front_right, left, right):
   u = np.dot(s, u_weights) + 1.
   w = np.dot(s, w_weights)
 
-  u *= 0.3
-  w *= 0.5
-
-  u -= 0.1
-
   return u, w
 
 def rule_based(front, front_left, front_right, left, right):
@@ -164,7 +159,7 @@ def run(args):
   frame_id = 0
   init_publish = False
 
-  print('starting')
+  print('Chaser controller initialized.')
   
   while not rospy.is_shutdown():
     # Make sure all measurements are ready.
@@ -190,27 +185,7 @@ def run(args):
       rate_limiter.sleep()
       continue
     
-    v = braitenberg(*(laser.measurements[::-1]))
-    print(laser.measurements)
-
-    # Calculate movement
-    """
-    for runner in RUNNERS:
-      runner_pose = groundtruth.poses[runner]
-      runner_pos = runner_pose[:2]
-      
-      diff = runner_pos - pose[:2]
-      dist = np.linalg.norm(diff)
-      
-      if dist < 3:
-        f_pos = runner_pos + np.array([np.cos(runner_pose[2]), np.sin(runner_pose[2])]) * dist
-        f_pos_diff = f_pos - pose[:2]
-        f_pos_dist = np.linalg.norm(f_pos_diff)
-        v = f_pos_diff / f_pos_dist * CHASER_SPEED
-        """
-    
-    u, w = feedback_linearized(pose, v, 0.1)
-
+    u, w = braitenberg(*laser.measurements)
     
     vel_msg = Twist()
     vel_msg.linear.x = u
